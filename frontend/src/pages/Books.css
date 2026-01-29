@@ -1,0 +1,22 @@
+/* Full-page background for the Browse (Books) page */
+.booksHero {
+    min-height: calc(100vh - 56px); /* adjust if your header height differs */
+    background-image: url("../assets/browsing-bg.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+  
+  /* overlay to keep text readable */
+  .booksOverlay {
+    min-height: calc(100vh - 56px);
+    background: rgba(0, 0, 0, 0.55);
+    padding: 24px 0;
+  }
+  
+  /* Optional: make cards a bit more readable on top of photo */
+  .booksOverlay .card {
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  

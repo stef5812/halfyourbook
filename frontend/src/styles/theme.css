@@ -1,0 +1,319 @@
+/* ================================
+   GLOBAL DESIGN TOKENS
+================================ */
+:root{
+    /* Base surfaces */
+    --bg: #f4f6f8;           /* page background */
+    --panel: #ffffff;        /* cards */
+    --border: #e2e6ea;
+    --border-strong: #c9ced6;
+  
+    /* Text */
+    --text: #1f2933;
+    --muted: #6b7280;
+  
+    /* Accent (from logo – light orange) */
+    --accent: #f28c28;
+    --accent-soft: rgba(242,140,40,0.18);
+  
+    /* Dark logo orange */
+    --accent-dark: #d97706;
+  
+    /* Radius & shadows (sharper) */
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 12px;
+  
+    --shadow-lg: 0 6px 14px rgba(0,0,0,0.08);
+  }
+  
+  
+  /* ================================
+     APP HEADER / BRAND
+  ================================ */
+  .appHeader{
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: 56px;
+    background: #ffffff;
+  
+    /* crisp separation */
+    border-bottom: 1px solid var(--border);
+  
+    /* accent shadow */
+    box-shadow: 0 3px 6px rgba(242,140,40,0.35);
+  }
+  
+  .appHeaderInner{
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 16px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .brand{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    letter-spacing: .3px;
+    color: var(--text);
+  }
+  
+  .brand img{
+    height: 24px;
+    max-height: 24px;
+    width: auto;
+    display: block;
+  }
+  
+  .brand span{
+    font-size: 13px;
+    color: #111827; /* crisper / more black */
+  }
+  
+  
+  /* ================================
+     RESET / BASE
+  ================================ */
+  *{ box-sizing: border-box; }
+  
+  html, body{
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont,
+                 "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.45;
+  }
+  
+  a{
+    color: var(--accent);
+    text-decoration: none;
+  }
+  a:hover{ text-decoration: underline; }
+  
+  
+  /* ================================
+     PAGE LAYOUT
+  ================================ */
+  .page{
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 22px;
+  }
+  
+  /* automatic vertical rhythm */
+  .page > * + *{
+    margin-top: 16px;
+  }
+  
+  .pageHeader{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  
+  .pageTitle{
+    margin:0;
+    font-size:28px;
+    font-weight:750;
+    letter-spacing:.2px;
+  }
+  
+  .pageSub{
+    margin:6px 0 0;
+    font-size:14px;
+    color: var(--muted);
+  }
+  
+  
+  /* ================================
+     CARDS
+  ================================ */
+  .card{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+  }
+  
+  /* Thin orange accent (sharper) */
+  .card::before{
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid var(--accent);
+    opacity: 0.50;
+    pointer-events: none;
+  }
+  
+  /* gentle hover */
+  .card:hover{
+    transform: translateY(-1px);
+  }
+  
+  
+  /* ================================
+     CARD HEADER
+  ================================ */
+  .cardHeader{
+    margin: -16px -16px 14px;   /* stretch to card edges */
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  
+  .cardTitle{
+    margin: 0;
+    font-size: 16px;
+    font-weight: 650;
+    letter-spacing: .2px;
+  }
+  
+  .cardSub{
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  
+  
+  /* ================================
+     FORMS
+  ================================ */
+  .formGrid{
+    display:grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  @media (min-width: 820px){
+    .formGrid{
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 16px;
+    }
+  }
+  
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  
+  .field input,
+  .field select,
+  .field textarea{
+    width:100%;
+    padding:11px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text);
+    outline: none;
+    transition: border-color 120ms ease, background 120ms ease, transform 120ms ease;
+  }
+  
+  .field textarea{
+    min-height: 96px;
+    resize: vertical;
+  }
+  
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus{
+    border-color: var(--border-strong);
+    background: #ffffff;
+    transform: translateY(-1px);
+  }
+  
+  .fieldFull{ grid-column: 1 / -1; }
+  
+  
+  /* ================================
+     BUTTONS / ACTIONS
+     (All buttons look like buttons, even <a>)
+  ================================ */
+  .actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:14px;
+  }
+  
+  .btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  
+    padding:10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-strong);
+  
+    background: #ffffff;
+    color: var(--text);
+    cursor:pointer;
+  
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  
+    text-decoration: none; /* kills link look */
+    user-select: none;
+  
+    transition: background 120ms ease,
+                border-color 120ms ease,
+                color 120ms ease,
+                transform 120ms ease;
+  }
+  
+  .btn:hover{
+    background: #f3f4f6;
+    transform: translateY(-1px);
+  }
+  
+  .btn:active{
+    transform: translateY(0);
+  }
+  
+  /* Primary = orange outline */
+  .btnPrimary{
+    border-color: var(--accent);
+    color: var(--accent-dark);
+    background: #fff;
+  }
+  
+  /* Secondary / neutral */
+  .btnSecondary{
+    border-color: var(--border-strong);
+    color: var(--text);
+    background: #fff;
+  }
+  
+  .btnSecondary:hover{
+    background: #f3f4f6;
+  }
+  
+  
+  /* ================================
+     ACCESSIBILITY
+  ================================ */
+  @media (prefers-reduced-motion: reduce){
+    .card, .btn, .field input, .field select, .field textarea{
+      transition: none !important;
+    }
+  }
+  
