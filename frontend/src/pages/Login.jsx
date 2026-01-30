@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api, setToken } from "../lib/api";
-import "./Login.css";
+import "./login.css";
 
 export default function Login() {
   const nav = useNavigate();
