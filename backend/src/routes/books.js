@@ -5,6 +5,12 @@ import { prisma } from "../lib/prisma.js";
 import { authRequired, requireRole } from "../lib/auth.js";
 import { canAccessBook } from "../lib/permissions.js";
 
+import fs from "fs";
+import os from "os";
+import path from "path";
+import Epub from "epub-gen";
+
+
 const router = Router();
 
 /* =========================
@@ -140,7 +146,9 @@ router.get("/:id", async (req, res) => {
       subtitle: book.subtitle ?? null,
       language: book.language ?? null,
       status: book.status,
+      description: book.blurb ?? "",
       blurb: book.blurb ?? "",
+
 
       genreId: book.genreId ?? null,
       genreName: book.genre?.name ?? null,
@@ -164,6 +172,118 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ error: "Failed to load book" });
   }
 });
+
+/* =========================
+   PUBLIC: DOWNLOAD EPUB FOR ANY BOOK (draft/published/paused)
+   GET /api/books/:id/epub?previewOnly=1
+   ========================= */
+   function escapeHtml(s = "") {
+    return String(s)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+  
+  function textToHtml(text = "") {
+    const safe = escapeHtml(text);
+    const paras = safe
+      .split(/\n{2,}/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `<p>${p.replaceAll("\n", "<br/>")}</p>`)
+      .join("\n");
+  
+    return `<!doctype html><html><head><meta charset="utf-8"/></head><body>${paras}</body></html>`;
+  }
+  
+  function safeSlug(s = "book") {
+    return String(s)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 80) || "book";
+  }
+  
+  router.get("/:id/epub", async (req, res) => {
+    try {
+      const id = req.params.id;
+      const previewOnly =
+        req.query.previewOnly === "1" ||
+        req.query.previewOnly === "true" ||
+        req.query.previewOnly === "yes";
+  
+      const book = await prisma.book.findFirst({
+        where: { id },
+        select: {
+          id: true,
+          title: true,
+          subtitle: true,
+          blurb: true,
+          status: true,
+          language: true,
+          author: { select: { displayName: true, email: true } },
+          sections: {
+            orderBy: { orderIndex: "asc" },
+            select: { title: true, content: true, orderIndex: true, isPreview: true },
+          },
+        },
+      });
+  
+      if (!book) return res.status(404).json({ error: "Book not found" });
+  
+      const sections = previewOnly
+        ? (book.sections || []).filter((s) => s.isPreview)
+        : (book.sections || []);
+  
+      if (!sections.length) {
+        return res.status(400).json({ error: previewOnly ? "No preview sections to export" : "No sections to export" });
+      }
+  
+      const chapters = sections.map((s, idx) => ({
+        title: s.title || `Chapter ${idx + 1}`,
+        data: textToHtml(s.content || ""),
+      }));
+  
+      // Build a temp epub file, then stream it
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hyb-epub-"));
+      const baseName = safeSlug(book.title || "book");
+      const filename = `${baseName}${previewOnly ? "-preview" : ""}.epub`;
+      const outPath = path.join(tmpDir, filename);
+  
+      await new Epub({
+        title: book.title || "Untitled",
+        author: book.author?.displayName || book.author?.email || "Unknown",
+        description: book.blurb || "",
+        lang: book.language || "en",
+        output: outPath,
+        content: chapters,
+      }).promise;
+  
+      res.setHeader("Content-Type", "application/epub+zip");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  
+      const stream = fs.createReadStream(outPath);
+      stream.pipe(res);
+  
+      stream.on("close", () => {
+        try {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch {}
+      });
+  
+      stream.on("error", () => {
+        try {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        } catch {}
+      });
+    } catch (e) {
+      console.error("GET /api/books/:id/epub failed:", e);
+      res.status(500).json({ error: "Failed to generate EPUB" });
+    }
+  });
+  
 
 /* =========================
    AUTHOR/ADMIN: CREATE BOOK

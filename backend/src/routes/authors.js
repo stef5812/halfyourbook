@@ -2,7 +2,68 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 
+import { authRequired } from "../lib/auth.js";
+
 const router = Router();
+
+/* =========================
+   ME (must be ABOVE /:id)
+   ========================= */
+
+// Get my author profile (for dashboard)
+router.get("/me", authRequired, async (req, res) => {
+  const userId = req.user?.sub;
+
+  if (!userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  const me = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      displayName: true,
+      email: true,
+      role: true,
+      authorProfile: {
+        select: { bio: true, photoUrl: true, website: true, instagram: true, twitter: true },
+      },
+    },
+  });
+
+  if (!me) return res.status(404).json({ error: "User not found" });
+
+  res.json({
+    id: me.id,
+    displayName: me.displayName ?? me.email,
+    role: me.role,
+    authorProfile: me.authorProfile ?? { bio: "", photoUrl: "", website: "", instagram: "", twitter: "" },
+  });
+});
+
+
+// Update my author profile (bio etc.)
+router.put("/me", authRequired, async (req, res) => {
+  const userId = req.user.sub;
+
+
+  if (!userId) {
+    return res.status(401).json({ error: "Not authenticated" });
+  }
+
+  const { bio = "", photoUrl = "", website = "", instagram = "", twitter = "" } = req.body || {};
+
+  const profile = await prisma.authorProfile.upsert({
+    where: { userId },
+    create: { userId, bio, photoUrl, website, instagram, twitter },
+    update: { bio, photoUrl, website, instagram, twitter },
+    select: { bio: true, photoUrl: true, website: true, instagram: true, twitter: true },
+  });
+
+  res.json({ ok: true, authorProfile: profile });
+});
+
+
 
 /**
  * GET /api/authors

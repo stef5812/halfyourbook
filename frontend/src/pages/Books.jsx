@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { api, getToken } from "../lib/api";
 import "./Books.css";
 
+const BASE = import.meta.env.DEV ? "" : "/halfyourbook";
+
 export default function Books() {
   const [items, setItems] = useState([]);
   const [genres, setGenres] = useState([]);
@@ -262,6 +264,28 @@ export default function Books() {
                     Read preview
                   </Link>
 
+                  <button
+                    className="btn"
+                    type="button"
+                    onClick={() => {
+                      window.location.href = `${BASE}/api/books/${b.id}/epub?previewOnly=1`;
+                    }}
+                  >
+                    Download EPUB
+                  </button>      
+
+                  {/* {canEditBook(b) ? (
+                    <button
+                      className="btn btnSecondary"
+                      type="button"
+                      onClick={() => {
+                        window.location.href = `${BASE}/api/books/${b.id}/epub`;
+                      }}
+                    >
+                      Download Full EPUB
+                    </button>
+                  ) : null}                               */}
+
                   {canEditBook(b) ? (
                     <>
                       <Link className="btn btnSecondary" to={`/dashboard?bookId=${b.id}`}>
@@ -279,6 +303,7 @@ export default function Books() {
                     </>
                   ) : null}
                 </div>
+                
               </div>
             </div>
           ))}

@@ -76,16 +76,39 @@ a:hover{ text-decoration: underline; }
   top: 0;
   z-index: 50;
 
-  min-height: 104px;      /* or 72px / 80px */
-  padding: 10px 0;       /* gives breathing room */
+  min-height: 104px;
+
 
   background: transparent;
-  border: 0;      /* optional */
-  box-shadow: none;          /* optional */
-  overflow: visible;     /* important: don’t clip */
+  box-shadow: none;
+  overflow: visible;
+
+  /* ✅ needed for ::before overlay positioning */
+  position: sticky;
 }
 
+/* ✅ Header overlay to match page overlays */
+.appHeader::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  /* MATCH Books overlay gradient */
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.05),
+    rgba(0,0,0,0.22)
+  );
+
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ✅ Keep actual header content above the overlay */
 .appHeaderInner{
+  position: relative;
+  z-index: 1;
+
   background: transparent;
   backdrop-filter: none;
   border-radius: 0;

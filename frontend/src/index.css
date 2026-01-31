@@ -66,3 +66,27 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+/* =========================
+   App overrides (fix grey strip + flex centering)
+   ========================= */
+   html, body {
+    height: 100%;
+  }
+  
+  :root {
+    color-scheme: light;
+    background: transparent;
+    color: #111;
+  }
+  
+  body {
+    margin: 0;
+    display: block;      /* ✅ stop flex-centering the entire app */
+    min-height: 100vh;
+    background: #f4f6f8; /* ✅ your app background (or use var(--bg) if you have it) */
+  }
+  
+  /* Ensure the React root fills the viewport */
+#root {
+  min-height: 100vh;
+}
