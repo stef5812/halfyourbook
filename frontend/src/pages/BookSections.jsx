@@ -84,7 +84,7 @@ export default function BookSections() {
   }
 
   return (
-    <div className="dashHero">
+    <div className="dashHero underHeader">
       <div className="dashOverlay">
         <div className="page">
           <div className="pageHeader">

@@ -11,6 +11,8 @@ import genresRoutes from "./src/routes/genres.js";
 import usersRoutes from "./src/routes/users.js";
 import uploadsRoutes from "./src/routes/uploads.js";
 import adminRoutes from "./src/routes/admin.js";
+import authorsRouter from "./src/routes/authors.js";
+
 
 
 const app = express(); // ✅ MUST come before app.use
@@ -18,6 +20,8 @@ const app = express(); // ✅ MUST come before app.use
 app.use(helmet());
 app.use(express.json({ limit: "2mb" }));
 app.use("/api/admin", adminRoutes);
+app.use("/api/authors", authorsRouter);
+
 
 
 app.use(

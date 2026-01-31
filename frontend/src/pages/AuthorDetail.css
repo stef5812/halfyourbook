@@ -1,0 +1,287 @@
+.authorHero{
+    min-height: 100vh;
+  
+    /* Same "behind header" effect as other pages */
+    margin-top: -104px;
+    padding-top: 104px;
+  
+    background-image: url("../assets/author-bg.png");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  
+    display: flex;
+  }
+  
+  .authorOverlay{
+    flex: 1;
+    background: linear-gradient(
+      to bottom,
+      rgba(0,0,0,0.55),
+      rgba(0,0,0,0.35),
+      rgba(0,0,0,0.55)
+    );
+  
+    display: flex;
+    padding: 24px;
+    justify-content: center;
+  }
+  
+  .authorInner{
+    width: min(1100px, 100%);
+    padding: 24px 16px 48px;
+  }
+  
+  .authorState{
+    color: #fff;
+    font-weight: 700;
+  }
+  
+  .authorCard{
+    background: rgba(255,255,255,0.92);
+    border-radius: 16px;
+    padding: 18px;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  
+  .authorHeader{
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 18px;
+    align-items: start;
+    margin-bottom: 18px;
+  }
+  
+  .authorPhotoWrap{
+    width: 140px;
+    height: 140px;
+  }
+  
+  .authorPhoto{
+    width: 140px;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 18px;
+    border: 1px solid rgba(255,255,255,0.35);
+  }
+  
+  .authorPhotoPlaceholder{
+    background: rgba(255,255,255,0.25);
+    border: 1px dashed rgba(255,255,255,0.5);
+  }
+  
+  .authorName{
+    color: #fff;
+    font-size: clamp(2.2rem, 4.5vw, 3rem);
+    font-weight: 800;
+    line-height: 1.05;
+  }
+  
+  .authorMeta{
+    color: rgba(255,255,255,0.9);
+    margin-top: 6px;
+    font-weight: 700;
+  }
+  
+  .authorBio{
+    margin-top: 12px;
+    color: rgba(255,255,255,0.95);
+    line-height: 1.45;
+    max-width: 70ch;
+  }
+  
+  .muted{
+    opacity: 0.75;
+    font-style: italic;
+  }
+  
+  /* Owner controls + inline feedback */
+  .authorOwnerRow{
+    margin-top: 12px;
+  }
+  
+  .authorOwnerBtns{
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  
+  .authorOwnerBtn{
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid rgba(0,0,0,0.12);
+    background: rgba(255,255,255,0.92);
+    color: #111;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-weight: 900;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  
+  .authorOwnerBtn.secondary{
+    background: rgba(255,255,255,0.22);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
+  }
+  
+  .authorOwnerBtn:disabled{
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .authorSaveErr{
+    margin-top: 10px;
+    color: rgba(255,255,255,0.95);
+    font-weight: 800;
+  }
+  
+  .authorSaveOk{
+    margin-top: 10px;
+    color: rgba(255,255,255,0.95);
+    font-weight: 900;
+  }
+  
+  /* Edit card */
+  .authorEditCard{
+    margin-top: 14px;
+    background: rgba(255,255,255,0.92);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+    max-width: 820px;
+  }
+  
+  .authorLabel{
+    display: block;
+    font-weight: 900;
+    font-size: 13px;
+    color: #111;
+    margin-bottom: 10px;
+  }
+  
+  .authorTextarea{
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.12);
+    font: inherit;
+    resize: vertical;
+  }
+  
+  .authorEditGrid{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  
+  .authorInput{
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(0,0,0,0.12);
+    font: inherit;
+  }
+  
+  /* Links */
+  .authorLinks{
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .authorLink{
+    display: inline-block;
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(0,0,0,0.08);
+    padding: 8px 10px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 13px;
+    color: #111;
+  }
+  
+  /* Books */
+  .authorBooksTitle{
+    margin: 22px 0 12px;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 800;
+  }
+  
+  .authorBooksGrid{
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  
+  .authorBookCard{
+    background: rgba(255,255,255,0.92);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid rgba(0,0,0,0.08);
+    text-decoration: none;
+    color: inherit;
+    transition: transform 120ms ease, box-shadow 120ms ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  
+  .authorBookCard:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 12px 34px rgba(0,0,0,0.42);
+  }
+  
+  .authorBookTitle{
+    font-weight: 900;
+    font-size: 16px;
+  }
+  
+  .authorBookMeta{
+    margin-top: 6px;
+    font-size: 13px;
+    opacity: 0.75;
+    font-weight: 700;
+  }
+  
+  .authorBookPreview{
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+  
+  .authorBookCta{
+    margin-top: 12px;
+    font-size: 13px;
+    font-weight: 900;
+    opacity: 0.85;
+  }
+  
+  /* Responsive */
+  @media (min-width: 760px){
+    .authorEditGrid{
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  
+  @media (max-width: 640px){
+    .authorHeader{
+      grid-template-columns: 1fr;
+    }
+    .authorPhotoWrap{
+      width: 120px;
+      height: 120px;
+    }
+    .authorPhoto{
+      width: 120px;
+      height: 120px;
+    }
+  }
+  

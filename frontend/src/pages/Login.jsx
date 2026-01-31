@@ -30,7 +30,7 @@ export default function Login() {
   }
 
   return (
-    <div className="loginHero">
+    <div className="loginHero underHeader">
       <div className="loginOverlay">
         <div className="page">
           <div className="pageHeader">

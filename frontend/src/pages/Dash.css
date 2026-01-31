@@ -4,6 +4,7 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    background-attachment: fixed;
   }
 
   /* Logged-out dashboard background */
@@ -17,7 +18,7 @@
   
   .dashOverlay {
     min-height: calc(100vh - 56px);
-    background: rgba(0, 0, 0, 0.55);
+
     padding: 24px 0;
   }
   

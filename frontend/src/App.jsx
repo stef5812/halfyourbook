@@ -14,6 +14,12 @@ import AdminHome from "./pages/AdminHome.jsx";
 import AdminUsers from "./pages/AdminUsers.jsx";
 import AdminBooks from "./pages/AdminBooks.jsx";
 import BookSections from "./pages/BookSections";
+import Authors from "./pages/Authors";
+import AuthorDetail from "./pages/AuthorDetail";
+
+
+import About from "./pages/About";
+
 
 
 export default function App() {
@@ -30,12 +36,19 @@ export default function App() {
         <Route path="/books" element={<Books />} />
         <Route path="/books/:id" element={<BookDetail />} />
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="*" element={<Navigate to="/books" replace />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/admin" element={<AdminHome />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/books" element={<AdminBooks />} />
         <Route path="/dashboard/sections" element={<BookSections />} />
+        <Route path="/authors" element={<Authors />} />
+        <Route path="/authors/:id" element={<AuthorDetail />} />
+
+
+        <Route path="/about" element={<About />} />
+        
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );

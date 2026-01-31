@@ -1,45 +1,93 @@
 // src/pages/Books.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, getToken } from "../lib/api";
 import "./Books.css";
 
 export default function Books() {
   const [items, setItems] = useState([]);
+  const [genres, setGenres] = useState([]);
+
+  const [status, setStatus] = useState("");   // "" = all
+  const [genreId, setGenreId] = useState(""); // "" = all
+  const [q, setQ] = useState("");             // client-side search
+
   const [err, setErr] = useState("");
   const [me, setMe] = useState(null);
   const [busyId, setBusyId] = useState("");
+  const [loading, setLoading] = useState(true);
 
+  // Load genres once (optional; page still works without it)
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
-      setErr("");
-
-      // 1) Always load public books (works for everyone)
       try {
-        const data = await api("/api/books");
-        setItems(Array.isArray(data?.items) ? data.items : []);
-      } catch (e) {
-        setErr(e.message || "Failed to load books");
-        return; // if books fail, nothing else matters
+        const g = await api("/api/genres");
+        if (!cancelled) setGenres(Array.isArray(g) ? g : Array.isArray(g?.items) ? g.items : []);
+        
+      } catch {
+        if (!cancelled) setGenres([]);
       }
+    })();
 
-      // 2) Optionally load current user (only to show Edit/Delete)
-      // If not logged in, /users/me will 401 — that's OK and should be silent.
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Load me once (only used for Edit/Delete)
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
       try {
         const token = getToken?.() || localStorage.getItem("token");
         if (!token) {
-          setMe(null);
+          if (!cancelled) setMe(null);
           return;
         }
 
         const m = await api("/api/users/me");
-        setMe(m || null);
+        if (!cancelled) setMe(m || null);
       } catch {
-        // IMPORTANT: ignore 401 here; it just means "guest"
-        setMe(null);
+        if (!cancelled) setMe(null);
       }
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Load books whenever filters change
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      setErr("");
+      setLoading(true);
+
+      try {
+        const qs = new URLSearchParams();
+        if (status) qs.set("status", status);
+        if (genreId) qs.set("genreId", genreId);
+
+        const url = `/api/books${qs.toString() ? `?${qs.toString()}` : ""}`;
+        const data = await api(url);
+
+        if (!cancelled) setItems(Array.isArray(data?.items) ? data.items : []);
+      } catch (e) {
+        if (!cancelled) setErr(e.message || "Failed to load books");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status, genreId]);
 
   function canEditBook(b) {
     if (!me) return false;
@@ -66,8 +114,21 @@ export default function Books() {
     }
   }
 
+  // Client-side search (doesn't hit backend)
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return items;
+
+    return items.filter((b) => {
+      const hay = `${b?.title ?? ""} ${b?.authorName ?? ""} ${b?.genreName ?? ""} ${b?.description ?? ""}`.toLowerCase();
+      return hay.includes(needle);
+    });
+  }, [items, q]);
+
+  const hasActiveFilters = Boolean(status || genreId || q);
+
   return (
-    <div className="booksHero">
+    <div className="booksHero underHeader">
       <div className="booksOverlay">
         <div className="page">
           <div className="pageHeader">
@@ -77,9 +138,71 @@ export default function Books() {
             </div>
           </div>
 
-          {err ? <div className="card">{err}</div> : null}
+          {/* ✅ Filters bar (uses existing layout + minimal new classes) */}
+          <div className="booksFiltersBar">
+            <div className="booksFilterItem">
+              <div className="booksFilterLabel">Genre</div>
+              <select
+                className="booksFilterSelect"
+                value={genreId}
+                onChange={(e) => setGenreId(e.target.value)}
+              >
+                <option value="">All genres</option>
+                {genres.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {items.map((b) => (
+            <div className="booksFilterItem">
+              <div className="booksFilterLabel">Status</div>
+              <select
+                className="booksFilterSelect"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+              >
+                <option value="">All statuses</option>
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="paused">Paused</option>
+              </select>
+            </div>
+
+            <div className="booksFilterItem booksFilterSearch">
+              <div className="booksFilterLabel">Search</div>
+              <input
+                className="booksFilterInput"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search title, author, genre…"
+                aria-label="Search books"
+              />
+            </div>
+
+            <button
+              type="button"
+              className="btn btnSecondary"
+              disabled={!hasActiveFilters}
+              onClick={() => {
+                setStatus("");
+                setGenreId("");
+                setQ("");
+              }}
+            >
+              Clear
+            </button>
+          </div>
+
+          {err ? <div className="card">{err}</div> : null}
+          {loading ? <div className="booksLoading">Loading…</div> : null}
+
+          {!loading && !err && filtered.length === 0 ? (
+            <div className="card">No books match those filters.</div>
+          ) : null}
+
+          {filtered.map((b) => (
             <div className="card" key={b.id}>
               <div className="cardHeader">
                 <div
@@ -117,7 +240,7 @@ export default function Books() {
                   <strong>Genre:</strong> {b.genreName || b.genreId || "—"}
                 </div>
 
-                {/* ✅ NEW: 100-word snippet from first section */}
+                {/* 100-word snippet from first section */}
                 {b.preview ? (
                   <div
                     style={{

@@ -1,22 +1,146 @@
-/* Full-page background for the Browse (Books) page */
-.booksHero {
-    min-height: calc(100vh - 56px); /* adjust if your header height differs */
-    background-image: url("../assets/browsing-bg.png");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+/* ================================
+   BOOKS – HERO BACKGROUND
+================================ */
+
+.booksHero{
+  min-height: 100vh;
+
+  /* behind-header effect */
+  margin-top: -104px;
+  padding-top: 104px;
+
+  background-image: url("../assets/browsing-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  /* keep bg still while scrolling (desktop) */
+  background-attachment: fixed;
+
+  display: flex;
+}
+
+.booksOverlay{
+  flex: 1;
+  min-height: 100vh;
+
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.22),
+    rgba(0,0,0,0.58)
+  );
+
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* Mobile/Safari: avoid jank with fixed backgrounds */
+@media (max-width: 900px){
+  .booksHero{
+    background-attachment: scroll;
   }
-  
-  /* overlay to keep text readable */
-  .booksOverlay {
-    min-height: calc(100vh - 56px);
-    background: rgba(0, 0, 0, 0.55);
-    padding: 24px 0;
-  }
-  
-  /* Optional: make cards a bit more readable on top of photo */
-  .booksOverlay .card {
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-  }
-  
+}
+
+/* ================================
+   PAGE WRAPPER (uses your global .page/.card styles)
+================================ */
+
+.booksOverlay .page{
+  width: min(1100px, 100%);
+}
+
+/* Optional: ensure header text is readable on the hero */
+.booksOverlay .pageHeader{
+  text-align: center;
+  color: #fff;
+}
+
+/* ================================
+   BOOKS FILTER BAR — DASHBOARD STYLE
+================================ */
+
+.booksFiltersBar{
+  /* card container */
+  background: rgba(255,255,255,0.92);
+  border-radius: 18px;
+  padding: 16px 18px;
+  margin: 16px auto 26px;
+  width: fit-content;
+  max-width: 100%;
+
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  border: 1px solid rgba(0,0,0,0.08);
+
+  /* horizontal layout */
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: center;
+}
+
+.booksFilterItem{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 200px; /* keeps columns neat */
+}
+
+.booksFilterLabel{
+  color: #333;
+  font-weight: 900;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* dropdown + input match dashboard look */
+.booksFilterSelect,
+.booksFilterInput{
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+
+  border: 1px solid rgba(0,0,0,0.18);
+  background: #fff;
+  color: #111;
+  font-weight: 700;
+
+  outline: none;
+}
+
+/* make select consistent */
+.booksFilterSelect{
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* search gets a bit wider */
+.booksFilterItem.booksFilterSearch{
+  min-width: 260px;
+}
+
+.booksFilterInput::placeholder{
+  color: rgba(0,0,0,0.45);
+}
+
+/* focus style */
+.booksFilterSelect:focus-visible,
+.booksFilterInput:focus-visible{
+  outline: none;
+  border-color: rgba(0,0,0,0.55);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.12);
+}
+
+
+
+/* ================================
+   LOADING TEXT
+================================ */
+
+.booksLoading{
+  color: #fff;
+  font-weight: 800;
+  margin: 10px 0 14px;
+}

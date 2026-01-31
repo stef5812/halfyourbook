@@ -1,66 +1,90 @@
-.homeHero {
-    min-height: calc(100vh - 56px); /* adjust if your header is different */
-    background-image: url("../assets/library-bg.png"); /* <- your saved image */
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    display: flex;
-  }
-  
-  .homeOverlay {
-    flex: 1;
-    background: rgba(0, 0, 0, 0.55);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-  }
-  
-  .homeInner {
-    width: min(960px, 100%);
-    display: grid;
-    gap: 18px;
-  }
-  
-  .homeHeader {
-    color: #fff;
-    text-align: center;
-  }
-  
-  .homeTitle {
-    font-size: clamp(2.4rem, 5vw, 3.6rem);
-    font-weight: 800;
-    letter-spacing: 0.5px;
-  }
-  
-  .homeSub {
-    margin-top: 10px;
-    font-size: 1.1rem;
-    opacity: 0.9;
-  }
-  
-  /* “card” look, but tuned for the photo background */
-  .homeCard {
-    background: rgba(255, 255, 255, 0.92);
-    border-radius: 16px;
-    padding: 18px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-  }
-  
-  .homeCardTitle {
-    font-size: 1.25rem;
-    font-weight: 800;
-  }
-  
-  .homeCardSub {
-    margin-top: 6px;
-    opacity: 0.85;
-  }
-  
-  .homeActions {
-    margin-top: 14px;
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-  
+/* ================================
+   HOME – HERO BACKGROUND
+================================ */
+
+/* Full-height hero with image */
+.homeHero{
+  min-height: 100vh;
+
+  /* Pull hero behind transparent header */
+  margin-top: -104px;
+  padding-top: 104px;
+
+  background-image: url("../assets/library-bg.png");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+
+  display: flex;
+}
+
+/* Dark overlay for readability
+   (lighter near the top so header blends in) */
+.homeOverlay{
+  flex: 1;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,0.18),
+    rgba(0,0,0,0.55)
+  );
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* Content container */
+.homeInner{
+  width: min(960px, 100%);
+  display: grid;
+  gap: 22px;
+}
+
+/* ================================
+   HERO TEXT
+================================ */
+.homeHeader{
+  color: #ffffff;
+  text-align: center;
+}
+
+.homeTitle{
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.homeSub{
+  margin-top: 10px;
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+/* ================================
+   CARD ON IMAGE
+================================ */
+.homeCard{
+  background: rgba(255,255,255,0.92);
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+}
+
+.homeCardTitle{
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.homeCardSub{
+  margin-top: 6px;
+  opacity: 0.85;
+}
+
+.homeActions{
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

@@ -9,9 +9,24 @@ const router = Router();
 
 /* =========================
    PUBLIC (FOR NOW): LIST ALL BOOKS
+   + optional filters: ?status=published&genreId=...
    ========================= */
-   router.get("/", async (req, res) => {
+router.get("/", async (req, res) => {
+  try {
+    const { status, genreId } = req.query;
+
+    const where = {};
+
+    if (status && ["draft", "published", "paused"].includes(status)) {
+      where.status = status;
+    }
+
+    if (genreId && typeof genreId === "string") {
+      where.genreId = genreId;
+    }
+
     const books = await prisma.book.findMany({
+      where,
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -20,18 +35,18 @@ const router = Router();
         blurb: true,
         status: true,
         updatedAt: true,
-  
+
         // ✅ author name (and email fallback)
         author: { select: { displayName: true, email: true } },
-  
+
         // ✅ genre
         genreId: true,
         genre: { select: { name: true } },
-  
+
         // ✅ tags
         tags: { select: { tag: { select: { name: true } } } },
-  
-        // ✅ NEW: first section only (ordered by orderIndex asc)
+
+        // ✅ first section only (ordered by orderIndex asc)
         sections: {
           orderBy: { orderIndex: "asc" },
           take: 1,
@@ -39,104 +54,115 @@ const router = Router();
         },
       },
     });
-  
+
     const previewFromContent = (content) => {
       if (!content) return "";
-  
+
       // normalize whitespace and split into words
       const words = String(content)
         .replace(/\s+/g, " ")
         .trim()
         .split(" ")
         .filter(Boolean);
-  
+
       const snippet = words.slice(0, 100).join(" ");
       return words.length > 100 ? snippet + "…" : snippet;
     };
-  
+
     res.json({
       items: books.map((b) => {
         const firstSectionContent = b.sections?.[0]?.content ?? "";
         const preview = previewFromContent(firstSectionContent);
-  
+
         return {
           id: b.id,
           authorId: b.authorId,
-  
-          // ✅ show title + status on the list response
+
           title: b.title,
           status: b.status,
-  
+
           description: b.blurb ?? "",
           updatedAt: b.updatedAt,
-  
-          // ✅ always return something usable
+
           authorName: b.author?.displayName || b.author?.email || "Unknown",
-  
+
           genreId: b.genreId ?? null,
           genreName: b.genre?.name ?? null,
-  
+
           tags: (b.tags || []).map((t) => t.tag?.name).filter(Boolean),
-  
-          // ✅ NEW: 100-word snippet from the first section
+
           preview,
         };
       }),
     });
-  });
-  
+  } catch (e) {
+    console.error("GET /api/books failed:", e);
+    res.status(500).json({ error: "Failed to load books" });
+  }
+});
 
 /* =========================
    PUBLIC (FOR NOW): GET ANY BOOK + ALL SECTIONS
    ========================= */
 router.get("/:id", async (req, res) => {
-  const id = req.params.id;
+  try {
+    const id = req.params.id;
 
-  const book = await prisma.book.findFirst({
-    where: { id },
-    select: {
-      id: true,
-      title: true,
-      blurb: true,
-      status: true,
-      subtitle: true,
-      language: true,
+    const book = await prisma.book.findFirst({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        blurb: true,
+        status: true,
+        subtitle: true,
+        language: true,
 
-      // ✅ include genre name here too (useful for preview page)
-      genreId: true,
-      genre: { select: { name: true } },
+        // ✅ include genre name here too (useful for preview page)
+        genreId: true,
+        genre: { select: { name: true } },
 
-      author: { select: { displayName: true, email: true } },
-      purchaseLinks: { select: { id: true, label: true, url: true } },
-      sections: {
-        orderBy: { orderIndex: "asc" },
-        select: { id: true, title: true, content: true, orderIndex: true, isPreview: true },
+        author: { select: { displayName: true, email: true } },
+        purchaseLinks: { select: { id: true, label: true, url: true } },
+        sections: {
+          orderBy: { orderIndex: "asc" },
+          select: { id: true, title: true, content: true, orderIndex: true, isPreview: true },
+        },
+        tags: { select: { tag: { select: { name: true } } } },
       },
-      tags: { select: { tag: { select: { name: true } } } },
-    },
-  });
+    });
 
-  if (!book) return res.status(404).json({ error: "Not found" });
+    if (!book) return res.status(404).json({ error: "Book not found" });
 
-  res.json({
-    id: book.id,
-    title: book.title,
-    description: book.blurb ?? "",
-    status: book.status,
-    subtitle: book.subtitle,
-    language: book.language,
+    res.json({
+      id: book.id,
+      title: book.title,
+      subtitle: book.subtitle ?? null,
+      language: book.language ?? null,
+      status: book.status,
+      blurb: book.blurb ?? "",
 
-    genreId: book.genreId,
-    genreName: book.genre?.name ?? null,
+      genreId: book.genreId ?? null,
+      genreName: book.genre?.name ?? null,
 
-    // keep both styles available
-    author: { displayName: book.author?.displayName ?? null },
-    authorName: book.author?.displayName || book.author?.email || "Unknown",
+      authorName: book.author?.displayName || book.author?.email || "Unknown",
 
-    purchaseLinks: book.purchaseLinks,
-    sections: book.sections,
-    tags: book.tags.map((t) => t.tag.name),
-  });
+      purchaseLinks: book.purchaseLinks || [],
+
+      tags: (book.tags || []).map((t) => t.tag?.name).filter(Boolean),
+
+      sections: (book.sections || []).map((s) => ({
+        id: s.id,
+        title: s.title,
+        content: s.content,
+        orderIndex: s.orderIndex,
+        isPreview: s.isPreview,
+      })),
+    });
+  } catch (e) {
+    console.error("GET /api/books/:id failed:", e);
+    res.status(500).json({ error: "Failed to load book" });
+  }
 });
 
 /* =========================

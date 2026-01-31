@@ -32,7 +32,7 @@ export default function Register() {
   }
 
   return (
-    <div className="loginHero">
+    <div className="loginHero underHeader">
       <div className="loginOverlay">    
     <div className="page">
       <div className="pageHeader">
