@@ -130,10 +130,21 @@ export default function Books() {
   const hasActiveFilters = Boolean(status || genreId || q);
 
   return (
+
+
+    
     <div className="booksHero underHeader">
       <div className="booksOverlay">
         <div className="page">
           <div className="pageHeader">
+
+          <div style={{ marginBottom: 12 }}>
+            <Link className="btn btnSecondary" to="/">
+              ← Home
+            </Link>
+          </div>
+
+
             <div className="pageTitle">Book previews</div>
             <div className="pageSub">
               Read large preview chunks, then buy directly from the author.

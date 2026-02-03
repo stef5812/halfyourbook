@@ -28,6 +28,30 @@ export default function BookSections() {
     setErr("");
   }, [authed, bookId]);
 
+  useEffect(() => {
+    if (!authed) return;
+    if (!bookId) return;
+  
+    (async () => {
+      try {
+        const b = await api(`/api/books/${bookId}`);
+  
+        const sections = Array.isArray(b?.sections) ? b.sections : [];
+        const maxOrder = sections.reduce((mx, s) => {
+          const n = Number(s.orderIndex);
+          return Number.isFinite(n) ? Math.max(mx, n) : mx;
+        }, -1); // -1 means if no sections, next becomes 0
+  
+        setSecOrder(maxOrder + 1);
+      } catch (e) {
+        console.error(e);
+        setErr(e.message || "Failed to load book sections for next order index.");
+      }
+    })();
+  }, [authed, bookId]);
+  
+  
+
   async function addSection() {
     setErr("");
     setMsg("Adding section...");
@@ -38,7 +62,7 @@ export default function BookSections() {
         body: JSON.stringify({
           title: secTitle || undefined,
           content: secContent,
-          orderIndex: Number(secOrder),
+          orderIndex: Number(nextOrder),
           isPreview: Boolean(secPreview),
         }),
       });
@@ -121,9 +145,15 @@ export default function BookSections() {
               </div>
 
               <div className="field">
-                <label>Order index</label>
-                <input type="number" value={secOrder} onChange={(e) => setSecOrder(e.target.value)} />
+                <label>Next section number</label>
+                <input
+                  type="number"
+                  value={secOrder}
+                  readOnly
+                  style={{ opacity: 0.7, cursor: "not-allowed" }}
+                />
               </div>
+
 
               <div className="field">
                 <label>Preview?</label>

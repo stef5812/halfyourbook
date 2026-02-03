@@ -47,6 +47,8 @@ export default function Authors() {
       <div className="authorsOverlay">
         <div className="authorsInner">
           <div className="authorsHeader">
+
+            
             <div className="authorsTitle">Authors</div>
             <div className="authorsSub">
               Browse creators and explore their book previews.

@@ -244,6 +244,14 @@ export default function BookDetail() {
           ) : (
             <>
               <div className="pageHeader">
+
+                <div style={{ marginBottom: 12 }}>
+                  <Link className="btn btnSecondary" to="/books">
+                    ← Back to Book previews
+                  </Link>
+                </div>
+
+
                 <div className="pageTitle">{book.title}</div>
                 <div className="pageSub">
                   by {book?.author?.displayName ?? "Unknown author"} • {book.status}
