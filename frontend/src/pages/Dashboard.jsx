@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useMemo, useState } from "react";
-import { api, getToken } from "../lib/api";
+import { api, withBase, getToken } from "../lib/api";
 import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import "./Dash.css";
 
@@ -261,7 +261,7 @@ export default function Dashboard() {
                 >
                   {photoUrl ? (
                     <img
-                      src={photoUrl}
+                      src={withBase(photoUrl)}
                       alt="Author"
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     />
