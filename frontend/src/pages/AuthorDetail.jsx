@@ -1,8 +1,10 @@
 // src/pages/AuthorDetail.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api } from "../lib/api";
+import { api, withBase } from "../lib/api";
 import "./AuthorDetail.css";
+
+
 
 export default function AuthorDetail() {
   const { id } = useParams();
@@ -150,10 +152,11 @@ export default function AuthorDetail() {
                 <div className="authorPhotoWrap">
                   {author.photoUrl ? (
                     <img
-                      className="authorPhoto"
-                      src={author.photoUrl}
-                      alt={author.name}
-                    />
+                    className="authorPhoto"
+                    src={withBase(author.photoUrl)}
+                    alt={author.name}
+                  />
+
                   ) : (
                     <div
                       className="authorPhoto authorPhotoPlaceholder"

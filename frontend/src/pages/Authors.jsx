@@ -4,6 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import "./Authors.css";
 
+import { withBase } from "../lib/api";
+
+
 export default function Authors() {
   const navigate = useNavigate();
   const [authors, setAuthors] = useState([]);
