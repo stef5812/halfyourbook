@@ -14,6 +14,9 @@ export default function BookDetail() {
   const [msg, setMsg] = useState("");
   const [busySectionId, setBusySectionId] = useState("");
 
+  // Section navigation state
+  const [idx, setIdx] = useState(0);
+
   // Inline edit state
   const [editingId, setEditingId] = useState("");
   const [draft, setDraft] = useState({
@@ -23,7 +26,7 @@ export default function BookDetail() {
     isPreview: false,
   });
 
-  const sections = useMemo(() => {
+  const sectionsAll = useMemo(() => {
     const s = book?.sections;
     return Array.isArray(s)
       ? s.slice().sort((a, b) => (a.orderIndex ?? 0) - (b.orderIndex ?? 0))
@@ -59,9 +62,48 @@ export default function BookDetail() {
     // If your book detail includes authorId, this enables owner edit
     if (book?.authorId && me.id && book.authorId === me.id) return true;
 
-    // If you don't have authorId in the payload, owner-check isn't possible here
     return false;
   }
+
+  const allowEdit = canEdit();
+
+  // Reader view: preview sections only (if any exist). Editors see all.
+  const sections = useMemo(() => {
+    if (allowEdit) return sectionsAll;
+    const previews = sectionsAll.filter((s) => s.isPreview);
+    return previews.length ? previews : sectionsAll;
+  }, [allowEdit, sectionsAll]);
+
+  // Reset navigation when book changes
+  useEffect(() => {
+    setIdx(0);
+    setEditingId("");
+    setDraft({ title: "", content: "", orderIndex: 0, isPreview: false });
+  }, [id, book?.id]);
+
+  const total = sections.length;
+  const current = total ? sections[idx] : null;
+
+  const canPrev = idx > 0;
+  const canNext = idx < total - 1;
+
+  const prev = () => setIdx((x) => Math.max(0, x - 1));
+  const next = () => setIdx((x) => Math.min(total - 1, x + 1));
+
+  // Keyboard nav (← →), but not while typing
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = document.activeElement?.tagName?.toLowerCase();
+      const typing = tag === "input" || tag === "textarea" || tag === "select";
+      if (typing) return;
+
+      if (e.key === "ArrowLeft") prev();
+      if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idx, total]);
 
   function startEdit(s) {
     setMsg("");
@@ -96,10 +138,9 @@ export default function BookDetail() {
         }),
       });
 
-      // update local book state
-      setBook((prev) => {
-        if (!prev) return prev;
-        const nextSections = (prev.sections || []).map((s) =>
+      setBook((prevBook) => {
+        if (!prevBook) return prevBook;
+        const nextSections = (prevBook.sections || []).map((s) =>
           s.id === sectionId
             ? {
                 ...s,
@@ -110,7 +151,7 @@ export default function BookDetail() {
               }
             : s
         );
-        return { ...prev, sections: nextSections };
+        return { ...prevBook, sections: nextSections };
       });
 
       setMsg("Section updated.");
@@ -133,12 +174,23 @@ export default function BookDetail() {
     try {
       await api(`/api/books/${id}/sections/${sectionId}`, { method: "DELETE" });
 
-      setBook((prev) => {
-        if (!prev) return prev;
-        return { ...prev, sections: (prev.sections || []).filter((s) => s.id !== sectionId) };
+      setBook((prevBook) => {
+        if (!prevBook) return prevBook;
+        return {
+          ...prevBook,
+          sections: (prevBook.sections || []).filter((s) => s.id !== sectionId),
+        };
       });
 
       setMsg("Section deleted.");
+
+      // keep idx in range after deletion
+      setIdx((cur) => {
+        const newTotal = Math.max(0, total - 1);
+        if (newTotal === 0) return 0;
+        return Math.min(cur, newTotal - 1);
+      });
+
       if (editingId === sectionId) cancelEdit();
     } catch (e) {
       setErr(e.message || "Failed to delete section");
@@ -147,7 +199,32 @@ export default function BookDetail() {
     }
   }
 
-  const allowEdit = canEdit();
+  // ✅ Reusable navigator rendered top + bottom
+  const Navigator = () => (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        flexWrap: "wrap",
+      }}
+    >
+      <div style={{ fontSize: 13, opacity: 0.85, userSelect: "none" }}>
+        Section <strong>{idx + 1}</strong> of <strong>{total}</strong>
+        <span style={{ opacity: 0.7 }}> (use ← →)</span>
+      </div>
+
+      <div style={{ display: "flex", gap: 8 }}>
+        <button className="btn" type="button" onClick={prev} disabled={!canPrev}>
+          ← Previous
+        </button>
+        <button className="btn" type="button" onClick={next} disabled={!canNext}>
+          Next →
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="booksHero">
@@ -174,7 +251,6 @@ export default function BookDetail() {
               </div>
 
               {msg ? <div className="card">{msg}</div> : null}
-              {err ? <div className="card">{err}</div> : null}
 
               <div className="card">
                 <div className="cardHeader">
@@ -189,127 +265,156 @@ export default function BookDetail() {
                   <div className="cardSub">
                     {allowEdit
                       ? "You can edit sections because you are admin/owner."
-                      : "Login as the owner/admin to edit sections."}
+                      : "Showing preview sections (if any)."}
                   </div>
                 </div>
 
                 <div style={{ padding: 16, display: "grid", gap: 12 }}>
-                  {sections.length === 0 ? <div>No sections yet.</div> : null}
+                  {total === 0 ? (
+                    <div>No sections yet.</div>
+                  ) : (
+                    <>
+                      {/* ✅ TOP NAV */}
+                      <Navigator />
 
-                  {sections.map((s) => {
-                    const isEditing = editingId === s.id;
-                    const isBusy = busySectionId === s.id;
+                      {/* Current section only */}
+                      {current ? (() => {
+                        const isEditing = editingId === current.id;
+                        const isBusy = busySectionId === current.id;
 
-                    return (
-                      <div
-                        key={s.id}
-                        style={{
-                          border: "1px solid #e2e6ea",
-                          borderRadius: 10,
-                          padding: 12,
-                        }}
-                      >
-                        {!isEditing ? (
-                          <>
-                            <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                              <div style={{ minWidth: 0 }}>
-                                <div style={{ fontWeight: 700 }}>
-                                  {s.orderIndex}. {s.title || "(Untitled section)"}
+                        return (
+                          <div
+                            style={{
+                              border: "1px solid #e2e6ea",
+                              borderRadius: 10,
+                              padding: 12,
+                            }}
+                          >
+                            {!isEditing ? (
+                              <>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    gap: 12,
+                                    alignItems: "flex-start",
+                                  }}
+                                >
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ fontWeight: 700 }}>
+                                      {current.orderIndex}. {current.title || "(Untitled section)"}
+                                    </div>
+                                    <div style={{ fontSize: 12, opacity: 0.8 }}>
+                                      {current.isPreview ? "Preview" : "Not preview"}
+                                    </div>
+                                  </div>
+
+                                  {allowEdit ? (
+                                    <div style={{ display: "flex", gap: 8 }}>
+                                      <button
+                                        className="btn"
+                                        type="button"
+                                        onClick={() => startEdit(current)}
+                                        disabled={isBusy}
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        className="btn"
+                                        type="button"
+                                        onClick={() => deleteSection(current.id)}
+                                        disabled={isBusy}
+                                      >
+                                        {isBusy ? "Working…" : "Delete"}
+                                      </button>
+                                    </div>
+                                  ) : null}
                                 </div>
-                                <div style={{ fontSize: 12, opacity: 0.8 }}>
-                                  {s.isPreview ? "Preview" : "Not preview"}
+
+                                <div style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>
+                                  {current.content}
                                 </div>
-                              </div>
-
-                              {allowEdit ? (
-                                <div style={{ display: "flex", gap: 8 }}>
-                                  <button className="btn" type="button" onClick={() => startEdit(s)}>
-                                    Edit
-                                  </button>
-                                  <button
-                                    className="btn"
-                                    type="button"
-                                    onClick={() => deleteSection(s.id)}
-                                    disabled={isBusy}
-                                  >
-                                    {isBusy ? "Working…" : "Delete"}
-                                  </button>
-                                </div>
-                              ) : null}
-                            </div>
-
-                            <div style={{ marginTop: 10, whiteSpace: "pre-wrap" }}>{s.content}</div>
-                          </>
-                        ) : (
-                          <>
-                            <div style={{ display: "grid", gap: 10 }}>
-                              <div className="field fieldFull">
-                                <label>Title</label>
-                                <input
-                                  value={draft.title}
-                                  onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-                                />
-                              </div>
-
-                              <div className="field fieldFull">
-                                <label>Content</label>
-                                <textarea
-                                  rows={8}
-                                  value={draft.content}
-                                  onChange={(e) => setDraft((d) => ({ ...d, content: e.target.value }))}
-                                />
-                              </div>
-
-                              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                                <div className="field">
-                                  <label>Order index</label>
+                              </>
+                            ) : (
+                              <div style={{ display: "grid", gap: 10 }}>
+                                <div className="field fieldFull">
+                                  <label>Title</label>
                                   <input
-                                    type="number"
-                                    value={draft.orderIndex}
+                                    value={draft.title}
                                     onChange={(e) =>
-                                      setDraft((d) => ({ ...d, orderIndex: e.target.value }))
+                                      setDraft((d) => ({ ...d, title: e.target.value }))
                                     }
                                   />
                                 </div>
 
-                                <div className="field">
-                                  <label>Preview?</label>
-                                  <select
-                                    value={draft.isPreview ? "yes" : "no"}
+                                <div className="field fieldFull">
+                                  <label>Content</label>
+                                  <textarea
+                                    rows={10}
+                                    value={draft.content}
                                     onChange={(e) =>
-                                      setDraft((d) => ({ ...d, isPreview: e.target.value === "yes" }))
+                                      setDraft((d) => ({ ...d, content: e.target.value }))
                                     }
+                                  />
+                                </div>
+
+                                <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                                  <div className="field">
+                                    <label>Order index</label>
+                                    <input
+                                      type="number"
+                                      value={draft.orderIndex}
+                                      onChange={(e) =>
+                                        setDraft((d) => ({ ...d, orderIndex: e.target.value }))
+                                      }
+                                    />
+                                  </div>
+
+                                  <div className="field">
+                                    <label>Preview?</label>
+                                    <select
+                                      value={draft.isPreview ? "yes" : "no"}
+                                      onChange={(e) =>
+                                        setDraft((d) => ({
+                                          ...d,
+                                          isPreview: e.target.value === "yes",
+                                        }))
+                                      }
+                                    >
+                                      <option value="yes">yes</option>
+                                      <option value="no">no</option>
+                                    </select>
+                                  </div>
+                                </div>
+
+                                <div style={{ display: "flex", gap: 8 }}>
+                                  <button
+                                    className="btn btnPrimary"
+                                    type="button"
+                                    onClick={() => saveEdit(current.id)}
+                                    disabled={isBusy || !draft.content.trim()}
                                   >
-                                    <option value="yes">yes</option>
-                                    <option value="no">no</option>
-                                  </select>
+                                    {isBusy ? "Saving…" : "Save"}
+                                  </button>
+                                  <button
+                                    className="btn"
+                                    type="button"
+                                    onClick={cancelEdit}
+                                    disabled={isBusy}
+                                  >
+                                    Cancel
+                                  </button>
                                 </div>
                               </div>
+                            )}
+                          </div>
+                        );
+                      })() : null}
 
-                              <div style={{ display: "flex", gap: 8 }}>
-                                <button
-                                  className="btn btnPrimary"
-                                  type="button"
-                                  onClick={() => saveEdit(s.id)}
-                                  disabled={isBusy || !draft.content.trim()}
-                                >
-                                  {isBusy ? "Saving…" : "Save"}
-                                </button>
-                                <button
-                                  className="btn"
-                                  type="button"
-                                  onClick={cancelEdit}
-                                  disabled={isBusy}
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
+                      {/* ✅ BOTTOM NAV */}
+                      <Navigator />
+                    </>
+                  )}
                 </div>
               </div>
 

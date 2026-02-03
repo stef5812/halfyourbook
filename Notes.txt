@@ -1,0 +1,400 @@
+📌 FULL PROJECT CONTEXT — HalfYourBook (Authoritative, Jan 2026)
+Project
+
+HalfYourBook
+Author: Stefan Dodds
+Domain: https://stefandodds.ie
+
+🎯 Purpose
+
+HalfYourBook is a platform for unpublished authors, hobby writers, and works-in-progress.
+
+Authors share generous previews, partial manuscripts, unfinished stories, or full texts to be read.
+
+No obligation to sell.
+
+If authors choose to sell, they link out directly (no payments handled by the app).
+
+Focus is connection, feedback, encouragement, and discovery, not algorithms or pressure.
+
+🌍 Deployment & Public Paths
+Production (Server)
+
+Frontend URL:
+https://stefandodds.ie/halfyourbook/
+
+API (public):
+/halfyourbook/api/*
+
+Uploads:
+/halfyourbook/uploads/*
+
+Frontend: static Vite build served by Nginx
+
+Backend: Node.js + Express, private, proxied by Nginx
+
+Backend internal port: 3004
+
+Local Development
+
+Frontend (Vite): http://localhost:5173
+
+Backend (Express): http://localhost:3004
+
+Important rule: frontend never hardcodes ports — always uses /api/...
+
+Vite proxy (dev only):
+
+/api → http://localhost:3004
+
+/uploads → http://localhost:3004
+
+Mental model: Vite proxy = fake Nginx (dev), Nginx = real proxy (prod).
+
+🔌 Ports & Processes (IMPORTANT DISCOVERY)
+
+HalfYourBook backend used to run on 3001, but now standardised on 3004.
+
+Earlier “Request failed”, login, and register errors were caused by:
+
+frontend proxy still pointing at 3001
+
+or an old backend process still running on 3001
+
+Fix: align backend PORT=3004 and Vite proxy.
+
+Health check
+
+Correct endpoint: GET /api/health
+
+Local:
+
+http://localhost:3004/api/health
+
+http://localhost:5173/api/health (via Vite proxy)
+
+Production:
+
+/halfyourbook/api/health
+
+Returns:
+
+{ "ok": true }
+
+🧱 Architecture (WORKING)
+Frontend
+
+Vite + React
+
+React Router
+
+Plain CSS (no CSS-in-JS)
+
+Shared theme: frontend/src/styles/theme.css
+
+Page-level CSS imports
+
+Base path handling:
+
+const BASE = import.meta.env.DEV ? "" : "/halfyourbook";
+
+Backend
+
+Node.js + Express (ESM)
+
+Prisma ORM
+
+JWT authentication (Bearer tokens)
+
+Rate limiting on auth routes
+
+File uploads served from /uploads
+
+API routes mounted under /api/*
+
+Key API Routes
+
+/api/auth
+
+/api/books
+
+/api/authors
+
+/api/authors/me
+
+/api/genres
+
+/api/users
+
+/api/admin
+
+/api/uploads
+
+/api/health
+
+🗄️ Database
+Engine
+
+PostgreSQL 16
+
+Docker container: halfyourbook_db
+
+Image: postgres:16
+
+Port mapping (local):
+
+localhost:5433 → container 5432
+
+Credentials (local)
+
+DB name: halfyourbook
+
+User: postgres
+
+Password: postgres
+
+Backend .env (local)
+DATABASE_URL="postgresql://postgres:postgres@localhost:5433/halfyourbook?schema=public"
+PORT=3004
+APP_BASE_URL="http://localhost:5173"
+JWT_SECRET=****
+
+
+⚠️ Important: PORT must be uppercase (case-sensitive).
+
+🧠 Prisma Models (Key)
+
+User
+
+Book
+
+BookSection
+
+AuthorProfile (bio, photo, socials)
+
+Genre
+
+Tag
+
+PurchaseLink
+
+PasswordReset
+
+Prisma migrations applied and verified.
+
+🐳 Docker
+Containers on Server
+
+halfyourbook_db → Postgres 16 (HalfYourBook)
+
+crm_postgres → CRM (separate)
+
+recipes_postgres → Recipe app (separate)
+
+⚠️ Recipe app runs separately and must not be stopped.
+
+🧑‍💻 Authors & Profiles (WORKING)
+/api/authors/me
+
+GET → fetch logged-in author profile
+
+PUT → upsert author bio, photo, socials
+
+Uses req.user.sub from JWT (important fix already made)
+
+Public
+
+/authors → authors index
+
+/authors/:id → author detail + bio + books
+
+📚 Books
+
+Books include:
+
+title
+
+blurb (description)
+
+status (draft | published | paused)
+
+sections (preview content)
+
+genre
+
+tags
+
+purchaseLinks
+
+Book description saving + DB verification tested directly in Postgres.
+
+🎨 UI / Styling
+
+Transparent header with overlay gradient
+
+Hero backgrounds per page:
+
+Home
+
+Dashboard
+
+Authors
+
+Author detail
+
+About
+
+Card-based layout for readability
+
+Filter UI on Browse Previews (genre + status)
+
+📄 Pages (Current)
+
+/ Home
+
+/books Browse previews
+
+/books/:id Read preview
+
+/authors Authors index
+
+/authors/:id Author profile
+
+/dashboard Author dashboard
+
+/about About (DONE)
+
+/login, /register
+
+About Page
+
+Purpose-driven copy
+
+Custom hero background + overlay
+
+Styled consistently with rest of app
+
+Lives at /halfyourbook/about
+
+🌐 Nginx (Relevant Config)
+# HalfYourBook frontend
+location /halfyourbook/ {
+  alias /var/www/stefandodds.ie/halfyourbook/;
+  try_files $uri $uri/ /halfyourbook/index.html;
+}
+
+# HalfYourBook uploads
+location /halfyourbook/uploads/ {
+  alias /var/www/halfyourbook/backend/uploads/;
+}
+
+# HalfYourBook API
+location /halfyourbook/api/ {
+  proxy_pass http://127.0.0.1:3004/;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+}
+
+🔧 Git & Deployment
+
+Repo: stef5812/halfyourbook
+
+.env files excluded via .gitignore
+
+Database never committed
+
+Frontend deploy
+npm run build
+rsync dist/ → /var/www/stefandodds.ie/halfyourbook/
+
+Backend deploy
+git fetch --all
+git reset --hard origin/main
+pm2 restart halfyourbook-api --update-env
+
+
+PM2 process name: halfyourbook-api
+
+💾 Database Backups (CRITICAL)
+Local backup location
+/c/Users/User/backups/halfyourbook/
+
+Naming
+
+Local: LOCAL_halfyourbook_YYYY-MM-DD_HH-MM.sql.gz
+
+Server: SERVER_halfyourbook_YYYY-MM-DD_HHMM.sql.gz
+
+Latest confirmed server backup (pulled local)
+SERVER_halfyourbook_2026-01-31_1806.sql.gz
+
+Local backup command
+docker exec halfyourbook_db pg_dump -U postgres -d halfyourbook --no-owner --no-acl \
+  | gzip > /c/Users/User/backups/halfyourbook/LOCAL_halfyourbook_$(date +"%Y-%m-%d_%H-%M").sql.gz
+
+Server backup command
+docker exec halfyourbook_db pg_dump -U postgres --no-owner --no-acl halfyourbook \
+  | gzip > /root/backups/halfyourbook/SERVER_halfyourbook_$(date +%Y-%m-%d_%H%M).sql.gz
+
+🔄 Restore Lessons (IMPORTANT)
+
+Never restore a full pg_dump into a DB with existing schema
+
+Either:
+
+DROP SCHEMA public CASCADE; then restore
+
+or restore into a new database
+
+Restore errors like “relation already exists” are expected otherwise
+
+After restore:
+
+npx prisma generate
+npm run dev
+
+🧠 Known Fixes Made
+
+JWT sub vs id mismatch fixed
+
+Prisma upsert failing due to undefined userId fixed
+
+Port conflicts resolved by moving HalfYourBook to 3004
+
+Vite proxy aligned with backend port
+
+Header overlay + padding issues resolved
+
+About page background + overlay aligned
+
+Genre dropdown + filters wired correctly
+
+✅ Current Status
+
+App working locally and on server
+
+Backend healthy
+
+Frontend rendering correctly
+
+Auth (login/register) working
+
+About page live
+
+Database backed up locally and on server
+
+Ready to continue with:
+
+author browsing improvements
+
+book preview UX
+
+EPUB export
+
+permissions & roles
+
+polish & accessibility
+
+END CONTEXT
