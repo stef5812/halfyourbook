@@ -1,12 +1,14 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useMemo, useState } from "react";
 import { api, withBase, getToken } from "../lib/api";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useSearchParams, useNavigate, Link, useLocation } from "react-router-dom";
 import "./Dash.css";
 
 export default function Dashboard() {
   const authed = Boolean(getToken());
   const navigate = useNavigate();
+  const location = useLocation();
+  const cameFromHome = location.state?.from === "home";
 
   // Book
   const [bookTitle, setBookTitle] = useState("");
@@ -16,14 +18,14 @@ export default function Dashboard() {
 
   const [genreId, setGenreId] = useState("");
   const [language, setLanguage] = useState("en");
-  const [status, setStatus] = useState("draft");
+  const [status, setStatus] = useState("unedited");
 
   const [searchParams] = useSearchParams();
   const bookIdFromUrl = searchParams.get("bookId") || "";
   const isEditingFromUrl = Boolean(bookIdFromUrl);
 
+  // (kept in case you still want it for other UI later)
   const activeBookId = bookId || bookIdFromUrl;
-
 
   // Page messages
   const [msg, setMsg] = useState("");
@@ -95,6 +97,9 @@ export default function Dashboard() {
       language,
       status,
     };
+
+    console.log("SAVE payload", payload);
+
 
     try {
       if (!bookId) {
@@ -198,30 +203,26 @@ export default function Dashboard() {
       <div className="dashOverlay">
         <div className="page">
           <div className="pageHeader">
-
-                    {activeBookId ? (
-            <div style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <Link className="btn btnSecondary" to={`/books`}>
-                ← Back to Book preview
-              </Link>
-
-
-            </div>
-          ) : null}
-
-
             <div className="pageTitle">{isEditingFromUrl ? "Edit book" : "Dashboard"}</div>
             <div className="pageSub">
               {isEditingFromUrl
                 ? "Update your book metadata, save, then add sections."
                 : "Create a book, save it, then add sections."}
             </div>
-
-
-            
           </div>
 
-          
+          {/* ✅ Navigation buttons (always visible; Home only if came from Home) */}
+          <div style={{ marginBottom: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link className="btn btnSecondary" to="/books">
+              ← Back to Book previews
+            </Link>
+
+            {cameFromHome ? (
+              <Link className="btn btnSecondary" to="/">
+                ← Back to Home
+              </Link>
+            ) : null}
+          </div>
 
           {err ? <div className="card">{err}</div> : null}
           {msg ? <div className="card">{msg}</div> : null}
@@ -246,10 +247,7 @@ export default function Dashboard() {
                 </div>
               ) : null}
 
-              <div
-                className="field fieldFull"
-                style={{ display: "flex", gap: 16, alignItems: "center" }}
-              >
+              <div className="field fieldFull" style={{ display: "flex", gap: 16, alignItems: "center" }}>
                 <div
                   style={{
                     width: 72,
@@ -341,9 +339,11 @@ export default function Dashboard() {
               <div className="field">
                 <label>Status</label>
                 <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  <option value="draft">draft</option>
-                  <option value="published">published</option>
-                  <option value="paused">paused</option>
+                <option value="an_idea">An Idea</option>
+                <option value="unedited">Unedited</option>
+                <option value="edited">Edited </option>
+                <option value="to_publish">to Publish</option>
+                <option value="published">Published</option>
                 </select>
               </div>
 
@@ -375,6 +375,8 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+
+          {/* (activeBookId is currently unused in this JSX, but kept above if you want it later) */}
         </div>
       </div>
     </div>

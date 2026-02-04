@@ -177,9 +177,11 @@ export default function Books() {
                 onChange={(e) => setStatus(e.target.value)}
               >
                 <option value="">All statuses</option>
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="paused">Paused</option>
+                <option value="An_Idea">An Idea</option>
+                <option value="Unedited">Unedited</option>
+                <option value="Edited">Edited </option>
+                <option value="to_publish">to Publish</option>
+                <option value="Published">Published</option>
               </select>
             </div>
 

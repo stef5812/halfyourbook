@@ -34,9 +34,14 @@ export default function Home() {
               </Link>
 
               {!authed && (
-                <Link className="btn" to="/login">
-                  Login
+                <Link
+                  className="btn"
+                  to="/authors/dashboard"
+                  state={{ from: "home" }}
+                >
+                  Author dashboard
                 </Link>
+
               )}
             </div>
           </div>
