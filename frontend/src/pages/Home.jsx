@@ -29,19 +29,16 @@ export default function Home() {
                 Browse book previews
               </Link>
 
-              <Link className="btn btnSecondary" to="/dashboard">
-                Author dashboard
-              </Link>
 
-              {!authed && (
-                <Link
-                  className="btn"
-                  to="/authors/dashboard"
-                  state={{ from: "home" }}
-                >
+
+              {!authed ? (
+                <Link className="btn" to="/login" state={{ from: "home" }}>
+                  Login
+                </Link>
+              ) : (
+                <Link className="btn btnSecondary" to="/dashboard">
                   Author dashboard
                 </Link>
-
               )}
             </div>
           </div>

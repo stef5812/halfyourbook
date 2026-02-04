@@ -40,6 +40,17 @@ export async function api(path, opts = {}) {
     ? await res.json()
     : await res.text();
 
-  if (!res.ok) throw new Error(data?.error || "Request failed");
+    if (!res.ok) {
+      // Try to extract a meaningful message from whatever the backend returned
+      const msg =
+        (typeof data === "string" && data) ||
+        data?.error ||
+        data?.message ||
+        (Array.isArray(data?.issues) ? JSON.stringify(data.issues) : "") ||
+        JSON.stringify(data);
+  
+      throw new Error(msg || `Request failed (${res.status})`);
+    }
+  
   return data;
 }

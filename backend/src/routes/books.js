@@ -10,8 +10,17 @@ import os from "os";
 import path from "path";
 import Epub from "epub-gen";
 
+console.log("✅ LOADED books router:", new Date().toISOString(), "FILE:", import.meta.url);
+
 
 const router = Router();
+
+const BOOK_STATUSES = ["draft", "an_idea", "unedited", "edited", "to_publish", "published", "paused"];
+
+// ✅ MUST be before router.get("/:id")
+router.get("/__debug/statuses", (req, res) => {
+  res.json({ BOOK_STATUSES });
+});
 
 /* =========================
    PUBLIC (FOR NOW): LIST ALL BOOKS
@@ -23,7 +32,7 @@ router.get("/", async (req, res) => {
 
     const where = {};
 
-    if (status && ["draft", "published", "paused"].includes(status)) {
+    if (status && BOOK_STATUSES.includes(status)) {
       where.status = status;
     }
 
@@ -118,6 +127,7 @@ router.get("/:id", async (req, res) => {
       where: { id },
       select: {
         id: true,
+        authorId: true, // ✅ ADD THIS
         title: true,
         blurb: true,
         status: true,
@@ -142,6 +152,7 @@ router.get("/:id", async (req, res) => {
 
     res.json({
       id: book.id,
+      authorId: book.authorId, // ✅ ADD THIS LINE
       title: book.title,
       subtitle: book.subtitle ?? null,
       language: book.language ?? null,
@@ -223,6 +234,7 @@ router.get("/:id", async (req, res) => {
           blurb: true,
           status: true,
           language: true,
+          authorId: true,
           author: { select: { displayName: true, email: true } },
           sections: {
             orderBy: { orderIndex: "asc" },
@@ -302,7 +314,7 @@ const createBookSchema = z.object({
   genre_id: z.union([z.number().int(), z.string()]).optional().nullable(),
   genreId: z.string().optional().nullable(),
 
-  status: z.enum(["draft", "published", "paused"]).optional(),
+  status: z.enum(BOOK_STATUSES).optional(),
 
   tags: z.array(z.string().min(1).max(40)).optional(),
   purchaseLinks: z
@@ -311,8 +323,12 @@ const createBookSchema = z.object({
 });
 
 router.post("/", authRequired, requireRole("author", "admin"), async (req, res) => {
+  console.log("CREATE BOOK status:", req.body?.status, "allowed:", BOOK_STATUSES);
   const parsed = createBookSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input", issues: parsed.error.issues });
+  }
+
 
   const d = parsed.data;
 
@@ -360,7 +376,7 @@ router.post("/", authRequired, requireRole("author", "admin"), async (req, res) 
     select: { id: true },
   });
 
-  res.json({ id: book.id });
+  res.json({ id: book.id, authorId: book.authorId });
 });
 
 /* =========================
@@ -377,7 +393,10 @@ router.post("/:id/sections", authRequired, requireRole("author", "admin"), async
   const bookId = req.params.id;
 
   const parsed = addSectionSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input", issues: parsed.error.issues });
+  }
+  
 
   const access = await canAccessBook({ user: req.user, bookId });
   if (!access.ok) return res.status(access.status).json({ error: access.error });
@@ -426,7 +445,10 @@ router.put(
     const { bookId, sectionId } = req.params;
 
     const parsed = updateSectionSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid input", issues: parsed.error.issues });
+    }
+    
 
     const access = await canAccessBook({ user: req.user, bookId });
     if (!access.ok) return res.status(access.status).json({ error: access.error });
@@ -481,14 +503,17 @@ const updateBookSchema = z.object({
   language: z.string().max(20).optional().nullable(),
   genre_id: z.union([z.number().int(), z.string()]).optional().nullable(),
   genreId: z.string().optional().nullable(),
-  status: z.enum(["draft", "published", "paused"]).optional(),
+  status: z.enum(BOOK_STATUSES).optional(),
 });
 
 router.put("/:id", authRequired, requireRole("author", "admin"), async (req, res) => {
   const bookId = req.params.id;
 
   const parsed = updateBookSchema.safeParse(req.body);
-  if (!parsed.success) return res.status(400).json({ error: "Invalid input" });
+  if (!parsed.success) {
+    return res.status(400).json({ error: "Invalid input", issues: parsed.error.issues });
+  }
+  
 
   const access = await canAccessBook({ user: req.user, bookId });
   if (!access.ok) return res.status(access.status).json({ error: access.error });
@@ -514,7 +539,7 @@ router.put("/:id", authRequired, requireRole("author", "admin"), async (req, res
 /* =========================
    ADMIN: DELETE BOOK (CASCADE DELETES SECTIONS/PREVIEWS)
    ========================= */
-router.delete("/:id", authRequired, requireRole("admin"), async (req, res) => {
+router.delete("/:id", authRequired, requireRole("admin", "author"), async (req, res) => {
   const bookId = req.params.id;
 
   const existing = await prisma.book.findUnique({
@@ -526,5 +551,16 @@ router.delete("/:id", authRequired, requireRole("admin"), async (req, res) => {
   await prisma.book.delete({ where: { id: bookId } });
   res.json({ ok: true });
 });
+
+console.log(
+  "✅ books router routes:",
+  router.stack
+    .filter((l) => l.route)
+    .map((l) => {
+      const method = Object.keys(l.route.methods)[0]?.toUpperCase();
+      return `${method} ${l.route.path}`;
+    })
+);
+
 
 export default router;

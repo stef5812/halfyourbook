@@ -24,12 +24,13 @@ model AuthorProfile {
   userId    String   @unique
   bio       String?
   website   String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
   photoUrl  String?
   instagram String?
   twitter   String?
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Genre {
@@ -42,14 +43,15 @@ model Book {
   id            String         @id @default(cuid())
   authorId      String
   title         String
+  subtitle      String?
   blurb         String?
   status        BookStatus     @default(draft)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
   genreId       String?
   language      String?
   publishedAt   DateTime?
-  subtitle      String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
   author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
   genre         Genre?         @relation(fields: [genreId], references: [id])
   sections      BookSection[]
@@ -66,7 +68,8 @@ model BookSection {
   isPreview  Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 
   @@unique([bookId, orderIndex])
 }
@@ -77,7 +80,8 @@ model PurchaseLink {
   label     String
   url       String
   createdAt DateTime @default(now())
-  book      Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
 }
 
 model Tag {
@@ -89,8 +93,9 @@ model Tag {
 model BookTag {
   bookId String
   tagId  String
-  book   Book   @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([bookId, tagId])
 }
@@ -102,7 +107,8 @@ model PasswordReset {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
@@ -115,11 +121,11 @@ enum Role {
 }
 
 enum BookStatus {
+  draft
   an_idea
   unedited
   edited
   to_publish
-  draft
   published
   paused
 }

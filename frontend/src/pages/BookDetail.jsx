@@ -41,6 +41,7 @@ export default function BookDetail() {
       try {
         const b = await api(`/api/books/${id}`);
         setBook(b);
+     
 
         // me is auth-only; ok if fails
         try {
@@ -428,7 +429,7 @@ export default function BookDetail() {
 
               <div style={{ padding: 16 }}>
                 <Link className="btn" to="/books">
-                  Back to books
+                ← Back to Book previews
                 </Link>
               </div>
             </>

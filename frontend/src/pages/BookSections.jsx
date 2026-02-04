@@ -62,7 +62,7 @@ export default function BookSections() {
         body: JSON.stringify({
           title: secTitle || undefined,
           content: secContent,
-          orderIndex: Number(nextOrder),
+          orderIndex: Number(secOrder),
           isPreview: Boolean(secPreview),
         }),
       });
