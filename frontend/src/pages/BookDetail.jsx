@@ -56,6 +56,16 @@ export default function BookDetail() {
     })();
   }, [id]);
 
+// Scroll to top when section changes
+useEffect(() => {
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: "smooth",
+  });
+}, [idx]);
+
+
   function canEdit() {
     if (!me) return false;
     if (me.role === "admin") return true;

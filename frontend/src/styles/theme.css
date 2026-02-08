@@ -174,11 +174,11 @@ a:hover{ text-decoration: underline; }
   width: 104px;              /* control size here */
   height: 104px;
 
-  border-radius: 50%;       /* 🔑 makes it round */
+         /* 🔑 makes it round */
   overflow: hidden;         /* clips the SVG */
 
-  background: #ffffff;      /* or transparent */
-  border: 2px solid var(--accent);  /* optional accent ring */
+        /* or transparent */
+  
 
   display: flex;
   align-items: center;
@@ -429,9 +429,9 @@ a:hover{ text-decoration: underline; }
   padding: 6px 12px;
   border-radius: 999px;
 
-  border: 1.5px solid var(--brand-green);
+  border: 1.5px solid #fff;
   background: var(--brand-green-soft);
-  color: var(--brand-green-dark);
+  color: #fff;
 
   font-size: 12.5px;
   font-weight: 700;
@@ -446,7 +446,8 @@ a:hover{ text-decoration: underline; }
 }
 
 .userChip:hover{
-  background: rgba(47,158,68,0.22);
+  color: #000;
+  background: #fff;
   box-shadow: 0 6px 16px rgba(47,158,68,0.30);
   transform: translateY(-1px);
 }

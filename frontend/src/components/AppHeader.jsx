@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { api, setToken, getToken } from "../lib/api";
-import mark from "../assets/logo.svg";
+import mark from "../assets/new-logo.png";
 
 export default function AppHeader() {
   const nav = useNavigate();
