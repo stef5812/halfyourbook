@@ -4,6 +4,8 @@ import { Link } from "react-router-dom";
 import { api, getToken } from "../lib/api";
 import "./Books.css";
 
+import { withBase } from "../lib/api";
+
 const BASE = import.meta.env.DEV ? "" : "/halfyourbook";
 
 export default function Books() {
@@ -266,11 +268,11 @@ export default function Books() {
       {b.coverUrl ? (
         <img
           className="booksCover"
-          src={b.coverUrl}
+          src={withBase(b.coverUrl)}
           alt={`${b.title} cover`}
           loading="lazy"
           onError={(e) => {
-            e.currentTarget.style.display = "none";
+            console.log("Cover failed:", e.currentTarget.src);
           }}
         />
       ) : null}
