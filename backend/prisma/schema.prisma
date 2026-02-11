@@ -58,6 +58,7 @@ model Book {
   sections      BookSection[]
   tags          BookTag[]
   purchaseLinks PurchaseLink[]
+  coverUrl  String?  // e.g. "/uploads/covers/book-123.png"
 }
 
 model BookSection {

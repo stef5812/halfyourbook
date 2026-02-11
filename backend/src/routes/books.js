@@ -6,9 +6,19 @@ import { authRequired, requireRole } from "../lib/auth.js";
 import { canAccessBook } from "../lib/permissions.js";
 
 import fs from "fs";
+import fsp from "fs/promises";
 import os from "os";
 import path from "path";
+import crypto from "crypto";
+import sharp from "sharp";
+
 import Epub from "epub-gen";
+
+import multer from "multer";
+
+const upload = multer({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
 
 console.log("✅ LOADED books router:", new Date().toISOString(), "FILE:", import.meta.url);
 
@@ -46,6 +56,7 @@ router.get("/", async (req, res) => {
       select: {
         id: true,
         authorId: true,
+        coverUrl: true,
         title: true,
         blurb: true,
         status: true,
@@ -96,6 +107,8 @@ router.get("/", async (req, res) => {
           title: b.title,
           status: b.status,
 
+          coverUrl: b.coverUrl ?? null,
+
           description: b.blurb ?? "",
           updatedAt: b.updatedAt,
 
@@ -128,6 +141,7 @@ router.get("/:id", async (req, res) => {
       select: {
         id: true,
         authorId: true, // ✅ ADD THIS
+        coverUrl: true,
         title: true,
         blurb: true,
         status: true,
@@ -153,6 +167,7 @@ router.get("/:id", async (req, res) => {
     res.json({
       id: book.id,
       authorId: book.authorId, // ✅ ADD THIS LINE
+      coverUrl: book.coverUrl ?? null, // ✅ ADD THIS
       title: book.title,
       subtitle: book.subtitle ?? null,
       language: book.language ?? null,
@@ -188,6 +203,64 @@ router.get("/:id", async (req, res) => {
    PUBLIC: DOWNLOAD EPUB FOR ANY BOOK (draft/published/paused)
    GET /api/books/:id/epub?previewOnly=1
    ========================= */
+
+   function safeFilename(s = "book") {
+    return String(s)
+      .replace(/[^\w\d\-_. ]+/g, "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .slice(0, 120) || "book";
+  }
+  
+  function absUploadsPath(relativeUrl) {
+    // relativeUrl like "/uploads/covers/book-123.png"
+    // Your backend serves uploads from: backend/uploads
+    return path.join(process.cwd(), "uploads", relativeUrl.replace(/^\/uploads\//, ""));
+  }
+  
+  async function fileExists(p) {
+    try { await fsp.access(p); return true; } catch { return false; }
+  }
+  
+  // If coverUrl is remote (https) OR local (/uploads/...), return a local temp JPG path for epub-gen
+  async function resolveCoverToTempJpg(book) {
+    // Adjust field name if yours differs (coverUrl / coverImage / coverPath etc.)
+    const coverUrl = book.coverUrl;
+
+    if (!coverUrl) return null;
+  
+    // 1) Determine input buffer
+    let inputBuffer = null;
+  
+    if (typeof coverUrl === "string" && coverUrl.startsWith("/uploads/")) {
+      const p = absUploadsPath(coverUrl);
+      if (!(await fileExists(p))) return null;
+      inputBuffer = await fsp.readFile(p);
+    } else if (typeof coverUrl === "string" && /^https?:\/\//i.test(coverUrl)) {
+      // Node 18+ has global fetch
+      const r = await fetch(coverUrl);
+      if (!r.ok) return null;
+      const arr = await r.arrayBuffer();
+      inputBuffer = Buffer.from(arr);
+    } else {
+      return null;
+    }
+  
+    // 2) Write a normalized JPEG cover to temp file
+    const tmpCover = path.join(
+      os.tmpdir(),
+      `hyb-cover-${book.id}-${crypto.randomUUID()}.jpg`
+    );
+  
+    await sharp(inputBuffer)
+      .resize({ width: 1600, height: 2560, fit: "cover" })
+      .jpeg({ quality: 85 })
+      .toFile(tmpCover);
+  
+    return tmpCover;
+  }
+  
+
    function escapeHtml(s = "") {
     return String(s)
       .replaceAll("&", "&amp;")
@@ -218,6 +291,9 @@ router.get("/:id", async (req, res) => {
   }
   
   router.get("/:id/epub", async (req, res) => {
+    let tmpDir = null;
+    let coverTmpPath = null;
+  
     try {
       const id = req.params.id;
       const previewOnly =
@@ -235,6 +311,7 @@ router.get("/:id", async (req, res) => {
           status: true,
           language: true,
           authorId: true,
+          coverUrl: true, // ✅ needed
           author: { select: { displayName: true, email: true } },
           sections: {
             orderBy: { orderIndex: "asc" },
@@ -250,7 +327,9 @@ router.get("/:id", async (req, res) => {
         : (book.sections || []);
   
       if (!sections.length) {
-        return res.status(400).json({ error: previewOnly ? "No preview sections to export" : "No sections to export" });
+        return res
+          .status(400)
+          .json({ error: previewOnly ? "No preview sections to export" : "No sections to export" });
       }
   
       const chapters = sections.map((s, idx) => ({
@@ -258,10 +337,13 @@ router.get("/:id", async (req, res) => {
         data: textToHtml(s.content || ""),
       }));
   
-      // Build a temp epub file, then stream it
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hyb-epub-"));
+      // ✅ COVER
+      coverTmpPath = await resolveCoverToTempJpg(book);
+  
+      // Temp output
+      tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hyb-epub-"));
       const baseName = safeSlug(book.title || "book");
-      const filename = `${baseName}${previewOnly ? "-preview" : ""}.epub`;
+      const filename = `${safeFilename(baseName)}${previewOnly ? "-preview" : ""}.epub`;
       const outPath = path.join(tmpDir, filename);
   
       await new Epub({
@@ -271,6 +353,9 @@ router.get("/:id", async (req, res) => {
         lang: book.language || "en",
         output: outPath,
         content: chapters,
+  
+        // ✅ makes it a real EPUB cover
+        ...(coverTmpPath ? { cover: coverTmpPath } : {}),
       }).promise;
   
       res.setHeader("Content-Type", "application/epub+zip");
@@ -279,22 +364,21 @@ router.get("/:id", async (req, res) => {
       const stream = fs.createReadStream(outPath);
       stream.pipe(res);
   
-      stream.on("close", () => {
-        try {
-          fs.rmSync(tmpDir, { recursive: true, force: true });
-        } catch {}
-      });
+      const cleanup = async () => {
+        try { if (tmpDir) await fsp.rm(tmpDir, { recursive: true, force: true }); } catch {}
+        try { if (coverTmpPath) await fsp.unlink(coverTmpPath); } catch {}
+      };
   
-      stream.on("error", () => {
-        try {
-          fs.rmSync(tmpDir, { recursive: true, force: true });
-        } catch {}
-      });
+      stream.on("close", cleanup);
+      stream.on("error", cleanup);
+      res.on("close", cleanup);
     } catch (e) {
       console.error("GET /api/books/:id/epub failed:", e);
       res.status(500).json({ error: "Failed to generate EPUB" });
     }
   });
+  
+  
   
 
 /* =========================
@@ -388,6 +472,46 @@ const addSectionSchema = z.object({
   orderIndex: z.number().int().min(0),
   isPreview: z.boolean().optional(),
 });
+
+router.post(
+  "/:id/cover",
+  authRequired,
+  requireRole("author", "admin"),
+  upload.single("cover"),
+  async (req, res) => {
+    const bookId = req.params.id;
+
+    const access = await canAccessBook({ user: req.user, bookId });
+    if (!access.ok) return res.status(access.status).json({ error: access.error });
+
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // Ensure uploads/covers folder exists
+    const coversDir = path.join(process.cwd(), "uploads", "covers");
+    await fsp.mkdir(coversDir, { recursive: true });
+
+    const ext = path.extname(req.file.originalname) || ".jpg";
+    const filename = `book-${bookId}-${crypto.randomUUID()}${ext}`;
+    const filepath = path.join(coversDir, filename);
+
+    await sharp(req.file.buffer)
+      .resize({ width: 1600, height: 2560, fit: "cover" })
+      .jpeg({ quality: 85 })
+      .toFile(filepath);
+
+    const publicPath = `/uploads/covers/${filename}`;
+
+    await prisma.book.update({
+      where: { id: bookId },
+      data: { coverUrl: publicPath },
+    });
+
+    res.json({ coverUrl: publicPath });
+  }
+);
+
 
 router.post("/:id/sections", authRequired, requireRole("author", "admin"), async (req, res) => {
   const bookId = req.params.id;

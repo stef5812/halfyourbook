@@ -5,8 +5,8 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-"dev": "nodemon --exec \"node --env-file .env\" server.js",
-"start": "node --env-file .env server.js",
+    "dev": "nodemon --exec \"node --env-file .env\" server.js",
+    "start": "node --env-file .env server.js",
     "migrate": "prisma migrate dev",
     "studio": "prisma studio",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -25,10 +25,12 @@
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "mime-types": "^3.0.2",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.13",
     "pg": "^8.17.2",
     "prisma": "^7.3.0",
+    "sharp": "^0.34.5",
     "zod": "^4.3.6"
   },
   "devDependencies": {
