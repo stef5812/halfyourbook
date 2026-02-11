@@ -259,109 +259,108 @@ export default function Books() {
             <div className="card">No books match those filters.</div>
           ) : null}
 
-          {filtered.map((b) => (
-            <div className="card" key={b.id}>
-              <div className="cardHeader">
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    alignItems: "baseline",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div className="cardTitle">{b.title}</div>
+    {filtered.map((b) => (
+      <div className="card" key={b.id}>
+        <div className="booksCardRow">
+      {/* Cover */}
+      {b.coverUrl ? (
+        <img
+          className="booksCover"
+          src={b.coverUrl}
+          alt={`${b.title} cover`}
+          loading="lazy"
+          onError={(e) => {
+            e.currentTarget.style.display = "none";
+          }}
+        />
+      ) : null}
 
-                  {/* Status badge */}
-                  <span
-                    style={{
-                      fontSize: 12,
-                      padding: "3px 10px",
-                      borderRadius: 999,
-                      border: "1px solid rgba(0,0,0,0.15)",
-                      opacity: 0.85,
-                    }}
-                  >
-                    {b.status || "draft"}
-                  </span>
-                </div>
 
-                <div className="cardSub">
-                  by {b.authorName || "Unknown author"}
-                  {b.tags?.length ? ` • ${b.tags.join(", ")}` : ""}
-                </div>
-              </div>
+      {/* Existing content */}
+      <div className="booksCardContent">
+        <div className="cardHeader">
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "baseline",
+              flexWrap: "wrap",
+            }}
+          >
+            <div className="cardTitle">{b.title}</div>
 
-              <div style={{ padding: "0 16px 16px" }}>
-                <div style={{ marginBottom: 12, opacity: 0.9 }}>
-                  <strong>Genre:</strong> {b.genreName || b.genreId || "—"}
-                </div>
+            <span
+              style={{
+                fontSize: 12,
+                padding: "3px 10px",
+                borderRadius: 999,
+                border: "1px solid rgba(0,0,0,0.15)",
+                opacity: 0.85,
+              }}
+            >
+              {b.status || "draft"}
+            </span>
+          </div>
 
-                {/* 100-word snippet from first section */}
-                {b.preview ? (
-                  <div
-                    style={{
-                      margin: "12px 0 14px",
-                      opacity: 0.9,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    {b.preview}
-                  </div>
-                ) : (
-                  <div style={{ margin: "12px 0 14px", opacity: 0.6 }}>
-                    No preview available yet.
-                  </div>
-                )}
+          <div className="cardSub">
+            by {b.authorName || "Unknown author"}
+            {b.tags?.length ? ` • ${b.tags.join(", ")}` : ""}
+          </div>
+        </div>
 
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <Link className="btn btnPrimary" to={`/books/${b.id}`}>
-                    Read preview
-                  </Link>
+        <div style={{ padding: "0 16px 16px" }}>
+          <div style={{ marginBottom: 12, opacity: 0.9 }}>
+            <strong>Genre:</strong> {b.genreName || b.genreId || "—"}
+          </div>
 
-                  <button
-                    className="btn"
-                    type="button"
-                    onClick={() => {
-                      window.location.href = `${BASE}/api/books/${b.id}/epub?previewOnly=1`;
-                    }}
-                  >
-                    Download EPUB
-                  </button>      
-
-                  {/* {canEditBook(b) ? (
-                    <button
-                      className="btn btnSecondary"
-                      type="button"
-                      onClick={() => {
-                        window.location.href = `${BASE}/api/books/${b.id}/epub`;
-                      }}
-                    >
-                      Download Full EPUB
-                    </button>
-                  ) : null}                               */}
-
-                  {canEditBook(b) ? (
-                    <>
-                      <Link className="btn btnSecondary" to={`/dashboard?bookId=${b.id}`}>
-                        Edit
-                      </Link>
-
-                      <button
-                        className="btn"
-                        type="button"
-                        disabled={busyId === b.id}
-                        onClick={() => deleteBook(b.id)}
-                      >
-                        {busyId === b.id ? "Deleting…" : "Delete"}
-                      </button>
-                    </>
-                  ) : null}
-                </div>
-                
-              </div>
+          {b.preview ? (
+            <div style={{ margin: "12px 0 14px", opacity: 0.9, lineHeight: 1.5 }}>
+              {b.preview}
             </div>
-          ))}
+          ) : (
+            <div style={{ margin: "12px 0 14px", opacity: 0.6 }}>
+              No preview available yet.
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link className="btn btnPrimary" to={`/books/${b.id}`}>
+              Read preview
+            </Link>
+
+            <button
+              className="btn"
+              type="button"
+              onClick={() => {
+                window.location.href = `${BASE}/api/books/${b.id}/epub?previewOnly=1`;
+              }}
+            >
+              Download EPUB
+            </button>
+
+            {canEditBook(b) ? (
+              <>
+                <Link className="btn btnSecondary" to={`/dashboard?bookId=${b.id}`}>
+                  Edit
+                </Link>
+
+                <button
+                  className="btn"
+                  type="button"
+                  disabled={busyId === b.id}
+                  onClick={() => deleteBook(b.id)}
+                >
+                  {busyId === b.id ? "Deleting…" : "Delete"}
+                </button>
+              </>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+))}
+
         </div>
       </div>
     </div>

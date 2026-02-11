@@ -16,6 +16,11 @@ export default function Dashboard() {
   const [bookDesc, setBookDesc] = useState("");
   const [bookId, setBookId] = useState("");
 
+  const [coverUrl, setCoverUrl] = useState("");
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverErr, setCoverErr] = useState("");
+  const [coverMsg, setCoverMsg] = useState("");  
+
   const [genreId, setGenreId] = useState("");
   const [language, setLanguage] = useState("en");
   const [status, setStatus] = useState("unedited");
@@ -77,7 +82,7 @@ export default function Dashboard() {
         setLanguage(b.language ?? "en");
         setStatus(b.status ?? "draft");
         setGenreId(b.genreId ?? b.genre_id ?? "");
-
+        setCoverUrl(b.coverUrl ?? ""); // ✅ ADD THIS
         setMsg("Loaded book for editing.");
       } catch (e) {
         setErr(e.message || "Failed to load book");
@@ -132,6 +137,41 @@ export default function Dashboard() {
       setMsg("");
     }
   }
+
+  async function uploadBookCover(file) {
+    setCoverErr("");
+    setCoverMsg("");
+    if (!file) return;
+  
+    if (!bookId && !bookIdFromUrl) {
+      setCoverErr("Save the book first, then upload a cover.");
+      return;
+    }
+  
+    const id = bookId || bookIdFromUrl;
+  
+    setCoverUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("cover", file);
+  
+      const up = await api(`/api/books/${id}/cover`, {
+        method: "POST",
+        body: fd,
+      });
+  
+      const url = up?.coverUrl;
+      if (!url) throw new Error("Upload did not return coverUrl");
+  
+      setCoverUrl(url);
+      setCoverMsg("Book cover updated.");
+    } catch (e) {
+      setCoverErr(e.message || "Cover upload failed");
+    } finally {
+      setCoverUploading(false);
+    }
+  }
+  
 
   async function uploadAuthorPhoto(file) {
     setPhotoErr("");
@@ -298,6 +338,54 @@ export default function Dashboard() {
                 <label>Subtitle (optional)</label>
                 <input value={bookSubtitle} onChange={(e) => setBookSubtitle(e.target.value)} />
               </div>
+
+{/* Book cover */}
+<div className="field fieldFull">
+  <label>Book cover (optional)</label>
+
+  {coverErr ? <div className="card">{coverErr}</div> : null}
+  {coverMsg ? <div className="card">{coverMsg}</div> : null}
+
+  <div style={{ display: "flex", gap: 16, alignItems: "center", marginTop: 8 }}>
+    <div
+      style={{
+        width: 90,
+        height: 135,
+        borderRadius: 10,
+        overflow: "hidden",
+        background: "#eee",
+        border: "1px solid #e5e7eb",
+      }}
+    >
+      {coverUrl ? (
+        <img
+          src={withBase(coverUrl)}
+          alt="Book cover"
+          style={{ width: "100%", height: "100%", objectFit: "cover" }}
+        />
+      ) : null}
+    </div>
+
+    <div style={{ flex: 1 }}>
+      <input
+        type="file"
+        accept="image/*"
+        disabled={coverUploading || !(bookId || bookIdFromUrl)}
+        onChange={(e) => uploadBookCover(e.target.files?.[0])}
+      />
+      <div style={{ marginTop: 8, opacity: 0.8 }}>
+        {!(bookId || bookIdFromUrl)
+          ? "Save the book first to enable cover upload."
+          : coverUploading
+          ? "Uploading…"
+          : coverUrl
+          ? "Current cover set."
+          : "No cover yet."}
+      </div>
+    </div>
+  </div>
+</div>
+
 
               <div className="field">
                 <label>Genre</label>

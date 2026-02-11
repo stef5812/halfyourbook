@@ -133,6 +133,27 @@
   box-shadow: 0 0 0 2px rgba(0,0,0,0.12);
 }
 
+.booksCardRow{
+  display:flex;
+  gap:16px;
+  align-items:flex-start;
+}
+
+.booksCover{
+  width:90px;
+  height:135px;
+  object-fit:cover;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,0.12);
+  background:#fff;
+  flex:0 0 auto;
+  margin:16px 0 16px 16px; /* lines up with your card padding */
+}
+
+.booksCardContent{
+  flex:1;
+  min-width:0;
+}
 
 
 /* ================================
