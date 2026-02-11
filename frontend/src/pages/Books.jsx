@@ -97,6 +97,48 @@ export default function Books() {
     return Boolean(me.id && b.authorId && me.id === b.authorId);
   }
 
+  async function downloadEpub(bookId, { previewOnly = true } = {}) {
+    setErr("");
+    setBusyId(bookId);
+  
+    try {
+      const token = getToken?.() || localStorage.getItem("token");
+  
+      const url = `${BASE}/api/books/${bookId}/epub${previewOnly ? "?previewOnly=1" : ""}`;
+  
+      const res = await fetch(url, {
+        method: "GET",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+  
+      if (!res.ok) {
+        const msg = await res.text().catch(() => "");
+        throw new Error(msg || `Download failed (${res.status})`);
+      }
+  
+      // Try to get a filename from Content-Disposition, else fallback
+      const cd = res.headers.get("content-disposition") || "";
+      const match = cd.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"/i);
+      const filename = decodeURIComponent(match?.[1] || match?.[2] || `book-${bookId}.epub`);
+  
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+  
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+  
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      setErr(e.message || "Failed to download EPUB");
+    } finally {
+      setBusyId("");
+    }
+  }  
+
   async function deleteBook(bookId) {
     const ok = window.confirm(
       "Delete this book and ALL its sections/previews? This cannot be undone."
