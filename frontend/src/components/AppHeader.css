@@ -1,0 +1,13 @@
+.menuProfilePhotoWrap {
+    display: flex;
+    justify-content: center;
+    margin: 0.5rem 0 0.75rem;
+  }
+  
+  .menuProfilePhoto {
+    width: 56px;
+    height: 56px;
+    display: block;
+    object-fit: cover;
+    border-radius: 50%;
+  }

@@ -1,11 +1,8 @@
 // src/pages/Authors.jsx
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { api } from "../lib/api";
 import "./Authors.css";
-
-import { withBase } from "../lib/api";
-
 
 export default function Authors() {
   const navigate = useNavigate();
@@ -14,6 +11,7 @@ export default function Authors() {
   const [err, setErr] = useState("");
   const [q, setQ] = useState("");
 
+  // Load authors once
   useEffect(() => {
     let cancelled = false;
 
@@ -21,7 +19,8 @@ export default function Authors() {
       try {
         setLoading(true);
         setErr("");
-        const data = await api("/api/authors"); // matches AppHeader style
+        const data = await api("/authors"); 
+        console.log("AUTHORS DATA:", data);
         if (!cancelled) setAuthors(Array.isArray(data) ? data : []);
       } catch (e) {
         if (!cancelled) setErr(e?.message || "Failed to load authors");
@@ -35,6 +34,7 @@ export default function Authors() {
     };
   }, []);
 
+  // Client-side search/filter
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return authors;
@@ -50,8 +50,6 @@ export default function Authors() {
       <div className="authorsOverlay">
         <div className="authorsInner">
           <div className="authorsHeader">
-
-            
             <div className="authorsTitle">Authors</div>
             <div className="authorsSub">
               Browse creators and explore their book previews.
@@ -98,14 +96,17 @@ export default function Authors() {
           {!loading && !err && filtered.length > 0 && (
             <div className="authorsGrid">
               {filtered.map((a) => (
-                <button
+                <div
                   key={a.id}
                   className="authorsCard authorsClickable"
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => navigate(`/authors/${a.id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") navigate(`/authors/${a.id}`);
+                  }}
                 >
                   <div className="authorsCardTitle">{a.name}</div>
-
                   <div className="authorsCardMeta">
                     {a.bookCount} {a.bookCount === 1 ? "book" : "books"}
                   </div>
@@ -118,27 +119,24 @@ export default function Authors() {
                     </div>
                   )}
 
-                  {/* NEW: clickable book titles */}
+                  {/* Books list (use Link, not button) */}
                   {Array.isArray(a.books) && a.books.length > 0 && (
                     <div className="authorsBookList">
                       {a.books.map((b) => (
-                        <button
+                        <Link
                           key={b.id}
-                          type="button"
+                          to={`/books/${b.id}`}
                           className="authorsBookLink"
-                          onClick={(e) => {
-                            e.stopPropagation(); // don’t trigger author card click
-                            navigate(`/books/${b.id}`);
-                          }}
+                          onClick={(e) => e.stopPropagation()} // prevent parent click
                         >
                           {b.title}
-                        </button>
+                        </Link>
                       ))}
                     </div>
                   )}
 
                   <div className="authorsCta">View author →</div>
-                </button>
+                </div>
               ))}
             </div>
           )}

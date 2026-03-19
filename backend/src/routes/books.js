@@ -16,6 +16,19 @@ import Epub from "epub-gen";
 
 import multer from "multer";
 
+import { fileURLToPath } from "url";
+
+import AdmZipModule from "adm-zip";
+const AdmZip = AdmZipModule.default ?? AdmZipModule;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// books.js lives in: backend/src/routes/books.js
+// backend root is:   backend/
+const BACKEND_ROOT = path.resolve(__dirname, "..", ".."); // backend/
+
+
 const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
@@ -24,6 +37,15 @@ console.log("✅ LOADED books router:", new Date().toISOString(), "FILE:", impor
 
 
 const router = Router();
+
+async function getAuthorProfileIdForUser(authUserId) {
+  const profile = await prisma.authorProfile.findUnique({
+    where: { userId: authUserId },
+    select: { id: true },
+  });
+
+  return profile?.id ?? null;
+}
 
 const BOOK_STATUSES = ["draft", "an_idea", "unedited", "edited", "to_publish", "published", "paused"];
 
@@ -63,7 +85,7 @@ router.get("/", async (req, res) => {
         updatedAt: true,
 
         // ✅ author name (and email fallback)
-        author: { select: { displayName: true, email: true } },
+        author: { select: { id: true, userId: true, bio: true, website: true, photoUrl: true } },
 
         // ✅ genre
         genreId: true,
@@ -112,7 +134,8 @@ router.get("/", async (req, res) => {
           description: b.blurb ?? "",
           updatedAt: b.updatedAt,
 
-          authorName: b.author?.displayName || b.author?.email || "Unknown",
+          authorName: "Author",
+          authorUserId: b.author?.userId ?? null,
 
           genreId: b.genreId ?? null,
           genreName: b.genre?.name ?? null,
@@ -136,7 +159,7 @@ router.get("/:id", async (req, res) => {
   try {
     const id = req.params.id;
 
-    const book = await prisma.book.findFirst({
+    const book = await prisma.book.findUnique({
       where: { id },
       select: {
         id: true,
@@ -152,7 +175,7 @@ router.get("/:id", async (req, res) => {
         genreId: true,
         genre: { select: { name: true } },
 
-        author: { select: { displayName: true, email: true } },
+        author: { select: { id: true, userId: true, bio: true, website: true, photoUrl: true } },
         purchaseLinks: { select: { id: true, label: true, url: true } },
         sections: {
           orderBy: { orderIndex: "asc" },
@@ -179,7 +202,8 @@ router.get("/:id", async (req, res) => {
       genreId: book.genreId ?? null,
       genreName: book.genre?.name ?? null,
 
-      authorName: book.author?.displayName || book.author?.email || "Unknown",
+      authorName: "Author",
+      authorUserId: book.author?.userId ?? null,
 
       purchaseLinks: book.purchaseLinks || [],
 
@@ -199,10 +223,103 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+function patchOpfForKobo(epubPath) {
+  const zip = new AdmZip(epubPath);
+
+  const opfEntry = zip.getEntries().find((e) => e.entryName.endsWith(".opf"));
+  if (!opfEntry) {
+    console.warn("Patching OPF: (no .opf found)");
+    return;
+  }
+
+  console.log("Patching OPF:", opfEntry.entryName);
+
+  let opf = zip.readAsText(opfEntry);
+
+  // 1) Fix href="OEBPS/cover.xxx" -> href="cover.xxx"
+  opf = opf.replace(
+    /(<item[^>]*\bid="cover"[^>]*\bhref=")OEBPS\/(cover\.(?:jpe?g|png)"[^>]*\/?>)/gi,
+    "$1$2"
+  );
+
+  // Helper: choose the cover item id (prefer image_cover if present)
+  const hasImageCover = /<item[^>]*\bid="image_cover"\b/i.test(opf);
+  const coverIdGuess = hasImageCover ? "image_cover" : "cover";
+
+  // 2) Ensure meta name="cover"
+  if (!/<meta\s+name="cover"\s+content="/i.test(opf)) {
+    opf = opf.replace(
+      /<\/metadata>/i,
+      `  <meta name="cover" content="${coverIdGuess}"/>\n</metadata>`
+    );
+  }
+
+  // Read back cover id from meta (source of truth)
+  const metaCoverMatch = opf.match(/<meta\s+name="cover"\s+content="([^"]+)"/i);
+  const coverId = metaCoverMatch?.[1] || coverIdGuess;
+
+  // 3) Ensure the manifest <item id="coverId"...> has properties="cover-image"
+  // Works for BOTH:
+  //   <item .../>
+  //   <item ...>
+  const itemRe = new RegExp(
+    `<item\\b([^>]*\\bid="${coverId}"[^>]*)(\\/?)>`,
+    "i"
+  );
+
+  opf = opf.replace(itemRe, (full, attrs, selfCloseSlash) => {
+    // attrs includes everything inside the tag before the final "/>" or ">"
+    if (/\\bproperties\\s*=\\s*"/i.test(attrs)) {
+      // Already has properties="..."
+      if (/\\bcover-image\\b/i.test(attrs)) {
+        return `<item${attrs}${selfCloseSlash}>`; // already fine
+      }
+      // Append cover-image into existing properties value
+      const updatedAttrs = attrs.replace(/properties="([^"]*)"/i, (m, p1) => {
+        const next = `${p1} cover-image`.replace(/\s+/g, " ").trim();
+        return `properties="${next}"`;
+      });
+      return `<item${updatedAttrs}${selfCloseSlash}>`;
+    }
+
+    // No properties attribute yet -> add it before close
+    const updatedAttrs = `${attrs} properties="cover-image"`;
+    return `<item${updatedAttrs}${selfCloseSlash}>`;
+  });
+
+  zip.updateFile(opfEntry.entryName, Buffer.from(opf, "utf8"));
+  zip.writeZip(epubPath);
+
+  console.log("Patch check — bad OEBPS/cover.* still present?:", /href="OEBPS\/cover\./i.test(opf));
+  console.log("Patch check — meta name=cover present?:", /<meta\s+name="cover"\s+content="/i.test(opf));
+  console.log("Patch check — cover-image present?:", /\bproperties="[^"]*\bcover-image\b/i.test(opf));
+}
+
+
+
 /* =========================
    PUBLIC: DOWNLOAD EPUB FOR ANY BOOK (draft/published/paused)
    GET /api/books/:id/epub?previewOnly=1
    ========================= */
+
+  //  function coverXhtml() {
+  //   return `<!doctype html>
+  // <html xmlns="http://www.w3.org/1999/xhtml">
+  // <head>
+  //   <meta charset="utf-8"/>
+  //   <title>Cover</title>
+  //   <style>
+  //     html, body { margin:0; padding:0; height:100%; }
+  //     body { display:flex; align-items:center; justify-content:center; }
+  //     img { max-width:100%; max-height:100%; }
+  //   </style>
+  // </head>
+  // <body>
+  //   <img src="cover.jpg" alt="Cover"/>
+  // </body>
+  // </html>`;
+  // }
+  
 
    function safeFilename(s = "book") {
     return String(s)
@@ -212,10 +329,15 @@ router.get("/:id", async (req, res) => {
       .slice(0, 120) || "book";
   }
   
+  // function absUploadsPath(relativeUrl) {
+  //   // relativeUrl like "/uploads/covers/book-123.png"
+  //   // Your backend serves uploads from: backend/uploads
+  //   return path.join(process.cwd(), "uploads", relativeUrl.replace(/^\/uploads\//, ""));
+  // }
+
   function absUploadsPath(relativeUrl) {
     // relativeUrl like "/uploads/covers/book-123.png"
-    // Your backend serves uploads from: backend/uploads
-    return path.join(process.cwd(), "uploads", relativeUrl.replace(/^\/uploads\//, ""));
+    return path.join(BACKEND_ROOT, "uploads", relativeUrl.replace(/^\/uploads\//, ""));
   }
   
   async function fileExists(p) {
@@ -234,17 +356,38 @@ router.get("/:id", async (req, res) => {
   
     if (typeof coverUrl === "string" && coverUrl.startsWith("/uploads/")) {
       const p = absUploadsPath(coverUrl);
-      if (!(await fileExists(p))) return null;
+    
+      console.log("EPUB coverUrl:", coverUrl);
+      console.log("EPUB cover abs path:", p);
+    
+      const exists = await fileExists(p);
+      console.log("EPUB cover exists?:", exists);
+    
+      if (!exists) {
+        console.log("EPUB cover file NOT found on disk.");
+        return null;
+      }
+    
       inputBuffer = await fsp.readFile(p);
+      console.log("EPUB cover file loaded. Size:", inputBuffer.length);
+    
     } else if (typeof coverUrl === "string" && /^https?:\/\//i.test(coverUrl)) {
-      // Node 18+ has global fetch
+      console.log("EPUB cover is remote URL:", coverUrl);
+    
       const r = await fetch(coverUrl);
+      console.log("EPUB remote fetch status:", r.status);
+    
       if (!r.ok) return null;
+    
       const arr = await r.arrayBuffer();
       inputBuffer = Buffer.from(arr);
+      console.log("EPUB remote cover loaded. Size:", inputBuffer.length);
+    
     } else {
+      console.log("EPUB coverUrl format not supported:", coverUrl);
       return null;
     }
+    
   
     // 2) Write a normalized JPEG cover to temp file
     const tmpCover = path.join(
@@ -301,7 +444,7 @@ router.get("/:id", async (req, res) => {
         req.query.previewOnly === "true" ||
         req.query.previewOnly === "yes";
   
-      const book = await prisma.book.findFirst({
+      const book = await prisma.book.findUnique({
         where: { id },
         select: {
           id: true,
@@ -311,8 +454,8 @@ router.get("/:id", async (req, res) => {
           status: true,
           language: true,
           authorId: true,
-          coverUrl: true, // ✅ needed
-          author: { select: { displayName: true, email: true } },
+          coverUrl: true,
+          author: { select: { id: true, userId: true } },
           sections: {
             orderBy: { orderIndex: "asc" },
             select: { title: true, content: true, orderIndex: true, isPreview: true },
@@ -327,9 +470,9 @@ router.get("/:id", async (req, res) => {
         : (book.sections || []);
   
       if (!sections.length) {
-        return res
-          .status(400)
-          .json({ error: previewOnly ? "No preview sections to export" : "No sections to export" });
+        return res.status(400).json({
+          error: previewOnly ? "No preview sections to export" : "No sections to export",
+        });
       }
   
       const chapters = sections.map((s, idx) => ({
@@ -340,6 +483,14 @@ router.get("/:id", async (req, res) => {
       // ✅ COVER
       coverTmpPath = await resolveCoverToTempJpg(book);
   
+      console.log("EPUB coverUrl:", book.coverUrl);
+      console.log("EPUB coverTmpPath:", coverTmpPath);
+  
+      if (coverTmpPath) {
+        const st = await fsp.stat(coverTmpPath);
+        console.log("EPUB coverTmpPath size:", st.size);
+      }
+  
       // Temp output
       tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hyb-epub-"));
       const baseName = safeSlug(book.title || "book");
@@ -348,15 +499,21 @@ router.get("/:id", async (req, res) => {
   
       await new Epub({
         title: book.title || "Untitled",
-        author: book.author?.displayName || book.author?.email || "Unknown",
+        author: "Author",
         description: book.blurb || "",
         lang: book.language || "en",
         output: outPath,
         content: chapters,
-  
-        // ✅ makes it a real EPUB cover
         ...(coverTmpPath ? { cover: coverTmpPath } : {}),
+        epub3: false, // Kobo-friendly
       }).promise;
+  
+      // ✅ IMPORTANT: patch should never kill the export
+      // try {
+      //   patchOpfForKobo(outPath);
+      // } catch (err) {
+      //   console.error("OPF patch failed (continuing without patch):", err);
+      // }
   
       res.setHeader("Content-Type", "application/epub+zip");
       res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
@@ -365,8 +522,12 @@ router.get("/:id", async (req, res) => {
       stream.pipe(res);
   
       const cleanup = async () => {
-        try { if (tmpDir) await fsp.rm(tmpDir, { recursive: true, force: true }); } catch {}
-        try { if (coverTmpPath) await fsp.unlink(coverTmpPath); } catch {}
+        try {
+          if (tmpDir) await fsp.rm(tmpDir, { recursive: true, force: true });
+        } catch {}
+        try {
+          if (coverTmpPath) await fsp.unlink(coverTmpPath);
+        } catch {}
       };
   
       stream.on("close", cleanup);
@@ -377,6 +538,7 @@ router.get("/:id", async (req, res) => {
       res.status(500).json({ error: "Failed to generate EPUB" });
     }
   });
+  
   
   
   
@@ -408,11 +570,11 @@ const createBookSchema = z.object({
 
 router.post("/", authRequired, requireRole("author", "admin"), async (req, res) => {
   console.log("CREATE BOOK status:", req.body?.status, "allowed:", BOOK_STATUSES);
+
   const parsed = createBookSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", issues: parsed.error.issues });
   }
-
 
   const d = parsed.data;
 
@@ -426,10 +588,16 @@ router.post("/", authRequired, requireRole("author", "admin"), async (req, res) 
   const genreId =
     d.genreId ?? (d.genre_id === null || d.genre_id === undefined ? null : String(d.genre_id));
 
-  // NOTE: this preserves your current behaviour: authorId comes from req.user.sub
+    const authUserId = req.user.id ?? req.user.sub;
+    const authorProfileId = await getAuthorProfileIdForUser(authUserId);
+
+  if (!authorProfileId) {
+    return res.status(403).json({ error: "No author profile found for this user" });
+  }
+
   const book = await prisma.book.create({
     data: {
-      authorId: req.user.sub,
+      authorId: authorProfileId,
       title: d.title,
       subtitle: d.subtitle ?? undefined,
       language: d.language ?? undefined,
@@ -457,10 +625,10 @@ router.post("/", authRequired, requireRole("author", "admin"), async (req, res) 
           }
         : {}),
     },
-    select: { id: true },
+    select: { id: true, authorId: true },
   });
 
-  res.json({ id: book.id, authorId: book.authorId });
+  res.json(book);
 });
 
 /* =========================
@@ -489,7 +657,7 @@ router.post(
     }
 
     // Ensure uploads/covers folder exists
-    const coversDir = path.join(process.cwd(), "uploads", "covers");
+    const coversDir = path.join(BACKEND_ROOT, "uploads", "covers");
     await fsp.mkdir(coversDir, { recursive: true });
 
     const ext = path.extname(req.file.originalname) || ".jpg";
@@ -594,27 +762,21 @@ router.put(
   }
 );
 
-router.delete(
-  "/:bookId/sections/:sectionId",
-  authRequired,
-  requireRole("author", "admin"),
-  async (req, res) => {
-    const { bookId, sectionId } = req.params;
+router.delete("/:id", authRequired, requireRole("admin", "author"), async (req, res) => {
+  const bookId = req.params.id;
 
-    const access = await canAccessBook({ user: req.user, bookId });
-    if (!access.ok) return res.status(access.status).json({ error: access.error });
+  const access = await canAccessBook({ user: req.user, bookId });
+  if (!access.ok) return res.status(access.status).json({ error: access.error });
 
-    const existing = await prisma.bookSection.findUnique({
-      where: { id: sectionId },
-      select: { bookId: true },
-    });
-    if (!existing) return res.status(404).json({ error: "Not found" });
-    if (existing.bookId !== bookId) return res.status(400).json({ error: "Mismatched book/section" });
+  const existing = await prisma.book.findUnique({
+    where: { id: bookId },
+    select: { id: true },
+  });
+  if (!existing) return res.status(404).json({ error: "Book not found" });
 
-    await prisma.bookSection.delete({ where: { id: sectionId } });
-    res.json({ ok: true });
-  }
-);
+  await prisma.book.delete({ where: { id: bookId } });
+  res.json({ ok: true });
+});
 
 /* =========================
    AUTHOR/ADMIN: UPDATE BOOK
@@ -658,22 +820,6 @@ router.put("/:id", authRequired, requireRole("author", "admin"), async (req, res
   });
 
   res.json(updated);
-});
-
-/* =========================
-   ADMIN: DELETE BOOK (CASCADE DELETES SECTIONS/PREVIEWS)
-   ========================= */
-router.delete("/:id", authRequired, requireRole("admin", "author"), async (req, res) => {
-  const bookId = req.params.id;
-
-  const existing = await prisma.book.findUnique({
-    where: { id: bookId },
-    select: { id: true },
-  });
-  if (!existing) return res.status(404).json({ error: "Book not found" });
-
-  await prisma.book.delete({ where: { id: bookId } });
-  res.json({ ok: true });
 });
 
 console.log(

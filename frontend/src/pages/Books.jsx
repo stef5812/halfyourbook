@@ -1,10 +1,8 @@
 // src/pages/Books.jsx
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { api, getToken } from "../lib/api";
+import { api, withBase } from "../lib/api";
 import "./Books.css";
-
-import { withBase } from "../lib/api";
 
 const BASE = import.meta.env.DEV ? "" : "/halfyourbook";
 
@@ -12,24 +10,25 @@ export default function Books() {
   const [items, setItems] = useState([]);
   const [genres, setGenres] = useState([]);
 
-  const [status, setStatus] = useState("");   // "" = all
-  const [genreId, setGenreId] = useState(""); // "" = all
-  const [q, setQ] = useState("");             // client-side search
+  const [status, setStatus] = useState("");
+  const [genreId, setGenreId] = useState("");
+  const [q, setQ] = useState("");
 
   const [err, setErr] = useState("");
   const [me, setMe] = useState(null);
   const [busyId, setBusyId] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Load genres once (optional; page still works without it)
+  // Load genres once
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const g = await api("/api/genres");
-        if (!cancelled) setGenres(Array.isArray(g) ? g : Array.isArray(g?.items) ? g.items : []);
-        
+        const g = await api("/genres");
+        if (!cancelled) {
+          setGenres(Array.isArray(g) ? g : Array.isArray(g?.items) ? g.items : []);
+        }
       } catch {
         if (!cancelled) setGenres([]);
       }
@@ -40,19 +39,13 @@ export default function Books() {
     };
   }, []);
 
-  // Load me once (only used for Edit/Delete)
+  // Load current user/profile once
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const token = getToken?.() || localStorage.getItem("token");
-        if (!token) {
-          if (!cancelled) setMe(null);
-          return;
-        }
-
-        const m = await api("/api/users/me");
+        const m = await api("/users/me");
         if (!cancelled) setMe(m || null);
       } catch {
         if (!cancelled) setMe(null);
@@ -77,10 +70,12 @@ export default function Books() {
         if (status) qs.set("status", status);
         if (genreId) qs.set("genreId", genreId);
 
-        const url = `/api/books${qs.toString() ? `?${qs.toString()}` : ""}`;
+        const url = `/books${qs.toString() ? `?${qs.toString()}` : ""}`;
         const data = await api(url);
 
-        if (!cancelled) setItems(Array.isArray(data?.items) ? data.items : []);
+        if (!cancelled) {
+          setItems(Array.isArray(data?.items) ? data.items : []);
+        }
       } catch (e) {
         if (!cancelled) setErr(e.message || "Failed to load books");
       } finally {
@@ -95,51 +90,14 @@ export default function Books() {
 
   function canEditBook(b) {
     if (!me) return false;
-    if (me.role === "admin") return true;
-    return Boolean(me.id && b.authorId && me.id === b.authorId);
-  }
 
-  async function downloadEpub(bookId, { previewOnly = true } = {}) {
-    setErr("");
-    setBusyId(bookId);
-  
-    try {
-      const token = getToken?.() || localStorage.getItem("token");
-  
-      const url = `${BASE}/api/books/${bookId}/epub${previewOnly ? "?previewOnly=1" : ""}`;
-  
-      const res = await fetch(url, {
-        method: "GET",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-  
-      if (!res.ok) {
-        const msg = await res.text().catch(() => "");
-        throw new Error(msg || `Download failed (${res.status})`);
-      }
-  
-      // Try to get a filename from Content-Disposition, else fallback
-      const cd = res.headers.get("content-disposition") || "";
-      const match = cd.match(/filename\*=UTF-8''([^;]+)|filename="([^"]+)"/i);
-      const filename = decodeURIComponent(match?.[1] || match?.[2] || `book-${bookId}.epub`);
-  
-      const blob = await res.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-  
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-  
-      window.URL.revokeObjectURL(blobUrl);
-    } catch (e) {
-      setErr(e.message || "Failed to download EPUB");
-    } finally {
-      setBusyId("");
-    }
-  }  
+    const myRole = String(me.role || "").toLowerCase();
+    if (myRole === "admin") return true;
+
+    // me.id = auth user id
+    // b.authorUserId = auth user id of the book owner
+    return Boolean(me.id && b.authorUserId && me.id === b.authorUserId);
+  }
 
   async function deleteBook(bookId) {
     const ok = window.confirm(
@@ -151,7 +109,7 @@ export default function Books() {
     setErr("");
 
     try {
-      await api(`/api/books/${bookId}`, { method: "DELETE" });
+      await api(`/books/${bookId}`, { method: "DELETE" });
       setItems((prev) => prev.filter((b) => b.id !== bookId));
     } catch (e) {
       setErr(e.message || "Failed to delete");
@@ -160,13 +118,13 @@ export default function Books() {
     }
   }
 
-  // Client-side search (doesn't hit backend)
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return items;
 
     return items.filter((b) => {
-      const hay = `${b?.title ?? ""} ${b?.authorName ?? ""} ${b?.genreName ?? ""} ${b?.description ?? ""}`.toLowerCase();
+      const hay =
+        `${b?.title ?? ""} ${b?.authorName ?? ""} ${b?.genreName ?? ""} ${b?.description ?? ""}`.toLowerCase();
       return hay.includes(needle);
     });
   }, [items, q]);
@@ -174,20 +132,15 @@ export default function Books() {
   const hasActiveFilters = Boolean(status || genreId || q);
 
   return (
-
-
-    
     <div className="booksHero underHeader">
       <div className="booksOverlay">
         <div className="page">
           <div className="pageHeader">
-
-          <div style={{ marginBottom: 12 }}>
-            <Link className="btn btnSecondary" to="/">
-              ← Home
-            </Link>
-          </div>
-
+            <div style={{ marginBottom: 12 }}>
+              <Link className="btn btnSecondary" to="/">
+                ← Home
+              </Link>
+            </div>
 
             <div className="pageTitle">Book previews</div>
             <div className="pageSub">
@@ -195,7 +148,6 @@ export default function Books() {
             </div>
           </div>
 
-          {/* ✅ Filters bar (uses existing layout + minimal new classes) */}
           <div className="booksFiltersBar">
             <div className="booksFilterItem">
               <div className="booksFilterLabel">Genre</div>
@@ -221,11 +173,13 @@ export default function Books() {
                 onChange={(e) => setStatus(e.target.value)}
               >
                 <option value="">All statuses</option>
+                <option value="draft">Draft</option>
                 <option value="an_idea">An Idea</option>
                 <option value="unedited">Unedited</option>
-                <option value="edited">Edited </option>
-                <option value="to_publish">to Publish</option>
+                <option value="edited">Edited</option>
+                <option value="to_publish">To Publish</option>
                 <option value="published">Published</option>
+                <option value="paused">Paused</option>
               </select>
             </div>
 
@@ -261,108 +215,104 @@ export default function Books() {
             <div className="card">No books match those filters.</div>
           ) : null}
 
-    {filtered.map((b) => (
-      <div className="card" key={b.id}>
-        <div className="booksCardRow">
-      {/* Cover */}
-      {b.coverUrl ? (
-        <img
-          className="booksCover"
-          src={withBase(b.coverUrl)}
-          alt={`${b.title} cover`}
-          loading="lazy"
-          onError={(e) => {
-            console.log("Cover failed:", e.currentTarget.src);
-          }}
-        />
-      ) : null}
+          {filtered.map((b) => (
+            <div className="card" key={b.id}>
+              <div className="booksCardRow">
+                {b.coverUrl ? (
+                  <img
+                    className="booksCover"
+                    src={withBase(b.coverUrl)}
+                    alt={`${b.title} cover`}
+                    loading="lazy"
+                    onError={(e) => {
+                      console.log("Cover failed:", e.currentTarget.src);
+                    }}
+                  />
+                ) : null}
 
+                <div className="booksCardContent">
+                  <div className="cardHeader">
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: 10,
+                        alignItems: "baseline",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div className="cardTitle">{b.title}</div>
 
-      {/* Existing content */}
-      <div className="booksCardContent">
-        <div className="cardHeader">
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              alignItems: "baseline",
-              flexWrap: "wrap",
-            }}
-          >
-            <div className="cardTitle">{b.title}</div>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          padding: "3px 10px",
+                          borderRadius: 999,
+                          border: "1px solid rgba(0,0,0,0.15)",
+                          opacity: 0.85,
+                        }}
+                      >
+                        {b.status || "draft"}
+                      </span>
+                    </div>
 
-            <span
-              style={{
-                fontSize: 12,
-                padding: "3px 10px",
-                borderRadius: 999,
-                border: "1px solid rgba(0,0,0,0.15)",
-                opacity: 0.85,
-              }}
-            >
-              {b.status || "draft"}
-            </span>
-          </div>
+                    <div className="cardSub">
+                      by {b.authorName || "Unknown author"}
+                      {b.tags?.length ? ` • ${b.tags.join(", ")}` : ""}
+                    </div>
+                  </div>
 
-          <div className="cardSub">
-            by {b.authorName || "Unknown author"}
-            {b.tags?.length ? ` • ${b.tags.join(", ")}` : ""}
-          </div>
-        </div>
+                  <div style={{ padding: "0 16px 16px" }}>
+                    <div style={{ marginBottom: 12, opacity: 0.9 }}>
+                      <strong>Genre:</strong> {b.genreName || b.genreId || "—"}
+                    </div>
 
-        <div style={{ padding: "0 16px 16px" }}>
-          <div style={{ marginBottom: 12, opacity: 0.9 }}>
-            <strong>Genre:</strong> {b.genreName || b.genreId || "—"}
-          </div>
+                    {b.preview ? (
+                      <div style={{ margin: "12px 0 14px", opacity: 0.9, lineHeight: 1.5 }}>
+                        {b.preview}
+                      </div>
+                    ) : (
+                      <div style={{ margin: "12px 0 14px", opacity: 0.6 }}>
+                        No preview available yet.
+                      </div>
+                    )}
 
-          {b.preview ? (
-            <div style={{ margin: "12px 0 14px", opacity: 0.9, lineHeight: 1.5 }}>
-              {b.preview}
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      <Link className="btn btnPrimary" to={`/books/${b.id}`}>
+                        Read preview
+                      </Link>
+
+                      <button
+                        className="btn"
+                        type="button"
+                        onClick={() => {
+                          window.location.href = `${BASE}/api/books/${b.id}/epub?previewOnly=1`;
+                        }}
+                      >
+                        Download EPUB
+                      </button>
+
+                      {canEditBook(b) ? (
+                        <>
+                          <Link className="btn btnSecondary" to={`/dashboard?bookId=${b.id}`}>
+                            Edit
+                          </Link>
+
+                          <button
+                            className="btn"
+                            type="button"
+                            disabled={busyId === b.id}
+                            onClick={() => deleteBook(b.id)}
+                          >
+                            {busyId === b.id ? "Deleting…" : "Delete"}
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div style={{ margin: "12px 0 14px", opacity: 0.6 }}>
-              No preview available yet.
-            </div>
-          )}
-
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link className="btn btnPrimary" to={`/books/${b.id}`}>
-              Read preview
-            </Link>
-
-            <button
-              className="btn"
-              type="button"
-              onClick={() => {
-                window.location.href = `${BASE}/api/books/${b.id}/epub?previewOnly=1`;
-              }}
-            >
-              Download EPUB
-            </button>
-
-            {canEditBook(b) ? (
-              <>
-                <Link className="btn btnSecondary" to={`/dashboard?bookId=${b.id}`}>
-                  Edit
-                </Link>
-
-                <button
-                  className="btn"
-                  type="button"
-                  disabled={busyId === b.id}
-                  onClick={() => deleteBook(b.id)}
-                >
-                  {busyId === b.id ? "Deleting…" : "Delete"}
-                </button>
-              </>
-            ) : null}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-))}
-
+          ))}
         </div>
       </div>
     </div>

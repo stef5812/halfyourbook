@@ -1,3 +1,5 @@
+//backend/src/routes/admin.js
+
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
 import { authRequired, requireRole } from "../lib/auth.js";

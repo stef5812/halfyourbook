@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../lib/api";
-import "./Books.css"; // ✅ reuse same background styles
+import "./Books.css";
 
 export default function BookDetail() {
   const { id } = useParams();
@@ -14,10 +14,8 @@ export default function BookDetail() {
   const [msg, setMsg] = useState("");
   const [busySectionId, setBusySectionId] = useState("");
 
-  // Section navigation state
   const [idx, setIdx] = useState(0);
 
-  // Inline edit state
   const [editingId, setEditingId] = useState("");
   const [draft, setDraft] = useState({
     title: "",
@@ -39,13 +37,11 @@ export default function BookDetail() {
       setMsg("");
 
       try {
-        const b = await api(`/api/books/${id}`);
+        const b = await api(`/books/${id}`);
         setBook(b);
-     
 
-        // me is auth-only; ok if fails
         try {
-          const m = await api("/api/users/me");
+          const m = await api("/users/me");
           setMe(m || null);
         } catch {
           setMe(null);
@@ -56,36 +52,28 @@ export default function BookDetail() {
     })();
   }, [id]);
 
-// Scroll to top when section changes
-useEffect(() => {
-  window.scrollTo({
-    top: 0,
-    left: 0,
-    behavior: "smooth",
-  });
-}, [idx]);
-
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "smooth",
+    });
+  }, [idx]);
 
   function canEdit() {
     if (!me) return false;
-    if (me.role === "admin") return true;
-
-    // If your book detail includes authorId, this enables owner edit
-    if (book?.authorId && me.id && book.authorId === me.id) return true;
-
-    return false;
+    if (String(me.role || "").toLowerCase() === "admin") return true;
+    return Boolean(book?.authorUserId && me.id && book.authorUserId === me.id);
   }
 
   const allowEdit = canEdit();
 
-  // Reader view: preview sections only (if any exist). Editors see all.
   const sections = useMemo(() => {
     if (allowEdit) return sectionsAll;
     const previews = sectionsAll.filter((s) => s.isPreview);
     return previews.length ? previews : sectionsAll;
   }, [allowEdit, sectionsAll]);
 
-  // Reset navigation when book changes
   useEffect(() => {
     setIdx(0);
     setEditingId("");
@@ -101,7 +89,6 @@ useEffect(() => {
   const prev = () => setIdx((x) => Math.max(0, x - 1));
   const next = () => setIdx((x) => Math.min(total - 1, x + 1));
 
-  // Keyboard nav (← →), but not while typing
   useEffect(() => {
     const onKey = (e) => {
       const tag = document.activeElement?.tagName?.toLowerCase();
@@ -113,7 +100,6 @@ useEffect(() => {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idx, total]);
 
   function startEdit(s) {
@@ -139,7 +125,7 @@ useEffect(() => {
     setMsg("");
 
     try {
-      await api(`/api/books/${id}/sections/${sectionId}`, {
+      await api(`/books/${id}/sections/${sectionId}`, {
         method: "PUT",
         body: JSON.stringify({
           title: draft.title || undefined,
@@ -183,7 +169,7 @@ useEffect(() => {
     setMsg("");
 
     try {
-      await api(`/api/books/${id}/sections/${sectionId}`, { method: "DELETE" });
+      await api(`/books/${id}/sections/${sectionId}`, { method: "DELETE" });
 
       setBook((prevBook) => {
         if (!prevBook) return prevBook;
@@ -195,7 +181,6 @@ useEffect(() => {
 
       setMsg("Section deleted.");
 
-      // keep idx in range after deletion
       setIdx((cur) => {
         const newTotal = Math.max(0, total - 1);
         if (newTotal === 0) return 0;
@@ -210,7 +195,6 @@ useEffect(() => {
     }
   }
 
-  // ✅ Reusable navigator rendered top + bottom
   const Navigator = () => (
     <div
       style={{
@@ -255,17 +239,15 @@ useEffect(() => {
           ) : (
             <>
               <div className="pageHeader">
-
                 <div style={{ marginBottom: 12 }}>
                   <Link className="btn btnSecondary" to="/books">
                     ← Back to Book previews
                   </Link>
                 </div>
 
-
                 <div className="pageTitle">{book.title}</div>
                 <div className="pageSub">
-                  by {book?.author?.displayName ?? "Unknown author"} • {book.status}
+                  by {book?.authorName ?? "Unknown author"} • {book.status}
                 </div>
               </div>
 
@@ -275,7 +257,7 @@ useEffect(() => {
                 <div className="cardHeader">
                   <div className="cardTitle">Description</div>
                 </div>
-                <div style={{ padding: 16 }}>{book.description || "—"}</div>
+                <div style={{ padding: 16 }}>{book.description || book.blurb || "—"}</div>
               </div>
 
               <div className="card">
@@ -293,10 +275,8 @@ useEffect(() => {
                     <div>No sections yet.</div>
                   ) : (
                     <>
-                      {/* ✅ TOP NAV */}
                       <Navigator />
 
-                      {/* Current section only */}
                       {current ? (() => {
                         const isEditing = editingId === current.id;
                         const isBusy = busySectionId === current.id;
@@ -384,7 +364,10 @@ useEffect(() => {
                                       type="number"
                                       value={draft.orderIndex}
                                       onChange={(e) =>
-                                        setDraft((d) => ({ ...d, orderIndex: e.target.value }))
+                                        setDraft((d) => ({
+                                          ...d,
+                                          orderIndex: Number(e.target.value),
+                                        }))
                                       }
                                     />
                                   </div>
@@ -430,7 +413,6 @@ useEffect(() => {
                         );
                       })() : null}
 
-                      {/* ✅ BOTTOM NAV */}
                       <Navigator />
                     </>
                   )}
@@ -439,7 +421,7 @@ useEffect(() => {
 
               <div style={{ padding: 16 }}>
                 <Link className="btn" to="/books">
-                ← Back to Book previews
+                  ← Back to Book previews
                 </Link>
               </div>
             </>

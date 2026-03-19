@@ -4,8 +4,6 @@ import { Link, useParams } from "react-router-dom";
 import { api, withBase } from "../lib/api";
 import "./AuthorDetail.css";
 
-
-
 export default function AuthorDetail() {
   const { id } = useParams();
 
@@ -21,7 +19,6 @@ export default function AuthorDetail() {
   const [saveErr, setSaveErr] = useState("");
   const [saveOk, setSaveOk] = useState("");
 
-  // Form state (bio + links)
   const [bio, setBio] = useState("");
   const [website, setWebsite] = useState("");
   const [instagram, setInstagram] = useState("");
@@ -31,7 +28,6 @@ export default function AuthorDetail() {
     return !!me?.id && !!author?.id && me.id === author.id;
   }, [me, author]);
 
-  // Load author + books + me
   useEffect(() => {
     let cancelled = false;
 
@@ -40,16 +36,15 @@ export default function AuthorDetail() {
         setLoading(true);
         setErr("");
 
-        // "me" is optional; page should still work for logged-out users
         let meResp = null;
         try {
-          meResp = await api("/api/users/me");
+          meResp = await api("/users/me");
         } catch {
           meResp = null;
         }
 
-        const a = await api(`/api/authors/${id}`);
-        const b = await api(`/api/authors/${id}/books`);
+        const a = await api(`/authors/${id}`);
+        const b = await api(`/authors/${id}/books`);
 
         if (cancelled) return;
 
@@ -57,7 +52,6 @@ export default function AuthorDetail() {
         setAuthor(a);
         setBooks(Array.isArray(b?.items) ? b.items : []);
 
-        // seed form from author response
         setBio(a?.bio ?? "");
         setWebsite(a?.links?.website ?? "");
         setInstagram(a?.links?.instagram ?? "");
@@ -84,7 +78,6 @@ export default function AuthorDetail() {
       setSaveErr("");
       setSaveOk("");
 
-      // Basic cleanup: allow empty strings, but trim leading/trailing whitespace
       const payload = {
         bio: bio?.trim() ?? "",
         website: website?.trim() ?? "",
@@ -92,17 +85,14 @@ export default function AuthorDetail() {
         twitter: twitter?.trim() ?? "",
       };
 
-      // Upsert my profile
-      await api("/api/authors/me", {
+      await api("/authors/me", {
         method: "PUT",
         body: JSON.stringify(payload),
       });
 
-      // Reload author so the page reflects the saved profile
-      const a = await api(`/api/authors/${id}`);
+      const a = await api(`/authors/${id}`);
       setAuthor(a);
 
-      // Re-seed (in case backend normalizes links)
       setBio(a?.bio ?? "");
       setWebsite(a?.links?.website ?? "");
       setInstagram(a?.links?.instagram ?? "");
@@ -118,7 +108,6 @@ export default function AuthorDetail() {
   }
 
   function cancelEdit() {
-    // restore from current author state
     setBio(author?.bio ?? "");
     setWebsite(author?.links?.website ?? "");
     setInstagram(author?.links?.instagram ?? "");
@@ -152,11 +141,10 @@ export default function AuthorDetail() {
                 <div className="authorPhotoWrap">
                   {author.photoUrl ? (
                     <img
-                    className="authorPhoto"
-                    src={withBase(author.photoUrl)}
-                    alt={author.name}
-                  />
-
+                      className="authorPhoto"
+                      src={withBase(author.photoUrl)}
+                      alt={author.name}
+                    />
                   ) : (
                     <div
                       className="authorPhoto authorPhotoPlaceholder"
@@ -173,7 +161,6 @@ export default function AuthorDetail() {
                     {author.bookCount === 1 ? "book" : "books"}
                   </div>
 
-                  {/* Owner controls */}
                   {isOwner && (
                     <div className="authorOwnerRow">
                       {!editMode ? (
@@ -186,7 +173,10 @@ export default function AuthorDetail() {
                             setEditMode(true);
                           }}
                         >
-                          {author.bio || author.links?.website || author.links?.instagram || author.links?.twitter
+                          {author.bio ||
+                          author.links?.website ||
+                          author.links?.instagram ||
+                          author.links?.twitter
                             ? "Edit profile"
                             : "Add your bio"}
                         </button>
@@ -215,14 +205,13 @@ export default function AuthorDetail() {
                     </div>
                   )}
 
-                  {/* Bio / Edit form */}
                   {!editMode ? (
                     author.bio ? (
                       <div className="authorBio">{author.bio}</div>
                     ) : (
                       <div className="authorBio muted">
                         No bio yet.
-                        {isOwner ? " Click “Add your bio” to create one." : ""}
+                        {isOwner ? ' Click "Add your bio" to create one.' : ""}
                       </div>
                     )
                   ) : (
@@ -272,7 +261,6 @@ export default function AuthorDetail() {
                     </div>
                   )}
 
-                  {/* Links (view mode only) */}
                   {!editMode && (
                     <div className="authorLinks">
                       {author.links?.website && (

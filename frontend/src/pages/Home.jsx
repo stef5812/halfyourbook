@@ -1,16 +1,67 @@
 // src/pages/Home.jsx
-import { Link } from "react-router-dom";
-import { getToken } from "../lib/api";
+import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { getCurrentUser, logout as apiLogout } from "../lib/api";
 import "./Home.css";
 
 export default function Home() {
-  const authed = Boolean(getToken());
+  const [me, setMe] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const nav = useNavigate();
+
+  const loginHref = import.meta.env.DEV
+    ? "http://localhost:5173/login?from=halfyourbook&next=http://localhost:5174/"
+    : "https://auth.stefandodds.ie/login?from=halfyourbook&next=https://halfyourbook.stefandodds.ie/";
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkAuth() {
+      try {
+        const m = await getCurrentUser(); // hits /auth/me
+        if (!cancelled) setMe(m || null);
+      } catch {
+        if (!cancelled) setMe(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    checkAuth();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function handleLogout() {
+    try {
+      await apiLogout(); // hits /auth/logout
+    } catch {
+      // ignore failure
+    }
+    setMe(null);
+    nav("/"); // redirect home
+  }
+
+  const currentUser = me?.user || null;
+  const appRoles = me?.appRoles || [];
+
+  const hasDashboardAccess = appRoles.some(
+    (r) =>
+      r.app === "HALFYOURBOOK" &&
+      (r.role === "AUTHOR" || r.role === "ADMIN")
+  );
+
+  const displayName =
+    currentUser?.displayName ||
+    currentUser?.firstName ||
+    currentUser?.email ||
+    "User";
 
   return (
     <div className="homeHero underHeader">
       <div className="homeOverlay">
         <div className="homeInner">
-
           <div className="homeHeader">
             <div className="homeTitle">HalfYourBook</div>
             <div className="homeSub">
@@ -20,6 +71,13 @@ export default function Home() {
 
           <div className="homeCard">
             <div className="homeCardTitle">Welcome</div>
+
+            {currentUser && (
+              <div style={{ marginBottom: 10, opacity: 0.8 }}>
+                Logged in as <b>{displayName}</b>
+              </div>
+            )}
+
             <div className="homeCardSub">
               Discover previews, then buy directly from the author.
             </div>
@@ -29,20 +87,27 @@ export default function Home() {
                 Browse book previews
               </Link>
 
-
-
-              {!authed ? (
-                <Link className="btn" to="/login" state={{ from: "home" }}>
+              {!loading && !currentUser && (
+                <a className="btn" href={loginHref}>
                   Login
-                </Link>
-              ) : (
-                <Link className="btn btnSecondary" to="/dashboard">
-                  Author dashboard
-                </Link>
+                </a>
+              )}
+
+              {!loading && currentUser && (
+                <>
+                  {hasDashboardAccess && (
+                    <Link className="btn btnSecondary" to="/dashboard">
+                      Author dashboard
+                    </Link>
+                  )}
+
+                  <button className="btn" onClick={handleLogout}>
+                    Logout
+                  </button>
+                </>
               )}
             </div>
           </div>
-
         </div>
       </div>
     </div>

@@ -10,24 +10,27 @@ const router = Router();
 router.get("/me", authRequired, async (req, res) => {
   const userId = req.user.sub;
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
+  const profile = await prisma.authorProfile.findUnique({
+    where: { userId },
     select: {
       id: true,
-      email: true,
-      displayName: true,
-      role: true,
-      authorProfile: { select: { photoUrl: true, bio: true, website: true } },
+      userId: true,
+      photoUrl: true,
+      bio: true,
+      website: true,
+      instagram: true,
+      twitter: true,
     },
   });
 
-  if (!user) return res.status(404).json({ error: "Not found" });
-
-  // ✅ Return both shapes so nothing breaks while you migrate frontend
   res.json({
-    ...user,
-    photoUrl: user.authorProfile?.photoUrl ?? null,
-    photo_url: user.authorProfile?.photoUrl ?? null,
+    id: userId,
+    email: req.user.email,
+    displayName: req.user.displayName,
+    role: req.user.role,
+    authorProfile: profile || null,
+    photoUrl: profile?.photoUrl ?? null,
+    photo_url: profile?.photoUrl ?? null,
   });
 });
 
@@ -43,7 +46,11 @@ const patchMeSchema = z
     website: z.string().max(2000).nullable().optional(),
   })
   .refine(
-    (d) => d.photoUrl !== undefined || d.photo_url !== undefined || d.bio !== undefined || d.website !== undefined,
+    (d) =>
+      d.photoUrl !== undefined ||
+      d.photo_url !== undefined ||
+      d.bio !== undefined ||
+      d.website !== undefined,
     { message: "No fields to update" }
   );
 
