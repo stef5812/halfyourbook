@@ -30,4 +30,16 @@ Thumbs.db
 # uploaded files
 backend/uploads/
 
+# Database backups
+backend/backups/
+*.sql
+*.sql.gz
+
+# Personal / notes / books
+notes/
+*.epub
+
+# Prisma temp / accidental folders
+backend/prisma/standalone-aut/
+
 tools/
