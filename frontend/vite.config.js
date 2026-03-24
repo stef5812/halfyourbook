@@ -2,9 +2,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig(({ command }) => {
-  const isBuild = command === "build";
-
+export default defineConfig(() => {
   return {
     plugins: [react()],
     base: "/halfyourbook/",
@@ -33,11 +31,9 @@ export default defineConfig(({ command }) => {
       },
     },
 
-    build: isBuild
-      ? {
-          outDir: "/var/www/stefandodds.ie/halfyourbook",
-          emptyOutDir: true,
-        }
-      : undefined,
+    build: {
+      outDir: "dist",
+      emptyOutDir: true,
+    },
   };
 });

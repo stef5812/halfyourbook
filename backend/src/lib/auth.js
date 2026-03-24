@@ -23,11 +23,14 @@ function getAuthMeUrl() {
 export async function authRequired(req, res, next) {
   try {
     const cookie = req.headers.cookie || "";
+    console.log("HYB incoming cookie:", cookie ? "present" : "missing");
+
     if (!cookie) {
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const authMeUrl = getAuthMeUrl();
+    console.log("Calling auth/me at:", authMeUrl);
 
     const response = await fetch(authMeUrl, {
       method: "GET",
@@ -37,11 +40,16 @@ export async function authRequired(req, res, next) {
       },
     });
 
+    console.log("auth/me status:", response.status);
+
     if (!response.ok) {
+      const text = await response.text();
+      console.log("auth/me body:", text);
       return res.status(401).json({ error: "Not authenticated" });
     }
 
     const data = await response.json();
+    console.log("auth/me user:", data?.user?.id);
 
     if (!data?.user?.id) {
       return res.status(401).json({ error: "Not authenticated" });
