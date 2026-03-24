@@ -8,16 +8,15 @@ export function signJwt(payload) {
 }
 
 function getAuthMeUrl() {
-  // In production you can set AUTH_ME_URL explicitly if you want
-  if (process.env.AUTH_ME_URL) return process.env.AUTH_ME_URL;
+  const url = process.env.AUTH_ME_URL;
 
-  // Default guesses
-  if (process.env.NODE_ENV === "production") {
-    return "https://auth.stefandodds.ie/auth/me";
+  if (!url) {
+    throw new Error(
+      "AUTH_ME_URL is not set. Please define it in your .env file."
+    );
   }
 
-  // local dev
-  return "http://127.0.0.1:3001/auth/me";
+  return url;
 }
 
 export async function authRequired(req, res, next) {

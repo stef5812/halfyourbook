@@ -8,6 +8,7 @@ const router = Router();
 
 // GET /api/users/me
 router.get("/me", authRequired, async (req, res) => {
+  console.log("HIT /api/users/me route", req.user);
   const userId = req.user.sub;
 
   const profile = await prisma.authorProfile.findUnique({

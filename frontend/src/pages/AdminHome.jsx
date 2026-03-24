@@ -16,7 +16,11 @@ export default function AdminHome() {
 
         <div style={{ padding: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
           <Link className="btn btnPrimary" to="/admin/users">
-            Manage users
+            Manage Authors
+          </Link>
+
+          <Link className="btn btnSecondary" to="/admin/books">
+            Manage books
           </Link>
 
           <Link className="btn btnSecondary" to="/admin/books">

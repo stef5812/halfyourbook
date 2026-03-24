@@ -571,7 +571,7 @@ export default function Dashboard() {
                         </Link>
                         <Link
                           className="btn btnSecondary"
-                          to={`/dashboard/sections?bookId=${encodeURIComponent(b.id)}`}
+                          to={`/books/${encodeURIComponent(b.id)}`}
                         >
                           Edit sections
                         </Link>
