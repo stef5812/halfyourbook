@@ -47,6 +47,57 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+r.post("/register-author", requireAuth(prisma), async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?.userId || req.user?.sub;
+
+    if (!userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const existing = await prisma.userAppRole.findUnique({
+      where: {
+        userId_app: {
+          userId,
+          app: "HALFYOURBOOK",
+        },
+      },
+    });
+
+    if (!existing) {
+      await prisma.userAppRole.create({
+        data: {
+          userId,
+          app: "HALFYOURBOOK",
+          role: "AUTHOR",
+        },
+      });
+    } else if (existing.role !== "AUTHOR" && existing.role !== "ADMIN") {
+      await prisma.userAppRole.update({
+        where: {
+          userId_app: {
+            userId,
+            app: "HALFYOURBOOK",
+          },
+        },
+        data: {
+          role: "AUTHOR",
+        },
+      });
+    }
+
+    return res.json({
+      ok: true,
+      message: "AUTHOR access granted for HalfYourBook",
+    });
+  } catch (error) {
+    console.error("POST /auth/register-author failed", error);
+    return res.status(500).json({
+      error: "Failed to register as author",
+    });
+  }
+});
+
 router.post("/login", async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: "Invalid credentials" });

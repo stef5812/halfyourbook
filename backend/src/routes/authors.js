@@ -57,10 +57,9 @@ router.post("/register", authRequired, async (req, res) => {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        accept: "application/json",
         cookie,
+        accept: "application/json",
       },
-      body: JSON.stringify({}),
     });
 
     const roleData = await roleResponse.json().catch(() => ({}));
@@ -71,24 +70,12 @@ router.post("/register", authRequired, async (req, res) => {
       });
     }
 
-    let profile = await prisma.authorProfile.findUnique({
+    let authorProfile = await prisma.authorProfile.findUnique({
       where: { userId },
-      select: {
-        id: true,
-        userId: true,
-        firstName: true,
-        lastName: true,
-        displayName: true,
-        bio: true,
-        photoUrl: true,
-        website: true,
-        instagram: true,
-        twitter: true,
-      },
     });
 
-    if (!profile) {
-      profile = await prisma.authorProfile.create({
+    if (!authorProfile) {
+      authorProfile = await prisma.authorProfile.create({
         data: {
           userId,
           firstName: "",
@@ -100,30 +87,19 @@ router.post("/register", authRequired, async (req, res) => {
           instagram: "",
           twitter: "",
         },
-        select: {
-          id: true,
-          userId: true,
-          firstName: true,
-          lastName: true,
-          displayName: true,
-          bio: true,
-          photoUrl: true,
-          website: true,
-          instagram: true,
-          twitter: true,
-        },
       });
     }
 
-    res.json({
+    return res.json({
       ok: true,
       message: "Author access granted",
-      displayName: profileDisplayName(profile, req.user),
-      authorProfile: profile,
+      authorProfile,
     });
-  } catch (err) {
-    console.error("POST /api/authors/register failed:", err);
-    res.status(500).json({ error: "Failed to register as author" });
+  } catch (error) {
+    console.error("POST /authors/register failed", error);
+    return res.status(500).json({
+      error: "Failed to register as author",
+    });
   }
 });
 
