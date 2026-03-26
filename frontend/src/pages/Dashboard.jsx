@@ -81,36 +81,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
-
-    async function registerAsAuthor() {
-      try {
-        setErr("");
-        setMsg("Registering you as an author...");
   
-        await api("/authors/register", {
-          method: "POST",
-        });
-  
-        const updatedAuth = await authApi("/me");
-        setAuthMe(updatedAuth || null);
-        setAuthed(!!updatedAuth?.user);
-  
-        const updatedProfile = await api("/authors/me");
-        setProfile(updatedProfile || null);
-  
-        const ap = updatedProfile?.authorProfile || null;
-        setFirstName(ap?.firstName || "");
-        setLastName(ap?.lastName || "");
-        setAuthorDisplayName(ap?.displayName || "");
-  
-        setMsg("Author access enabled. Welcome to your dashboard.");
-      } catch (e) {
-        console.error(e);
-        setErr(e.message || "Failed to register as author");
-        setMsg("");
-      }
-    }
-
     async function checkAuth() {
       try {
         const data = await authApi("/me");
@@ -127,12 +98,42 @@ export default function Dashboard() {
         if (!cancelled) setAuthLoading(false);
       }
     }
-
+  
     checkAuth();
     return () => {
       cancelled = true;
     };
   }, []);
+  
+  async function registerAsAuthor() {
+    try {
+      setErr("");
+      setMsg("Registering you as an author...");
+  
+      await api("/authors/register", {
+        method: "POST",
+      });
+  
+      const updatedAuth = await authApi("/me");
+      setAuthMe(updatedAuth || null);
+      setAuthed(!!updatedAuth?.user);
+  
+      const updatedProfile = await api("/authors/me");
+      setProfile(updatedProfile || null);
+  
+      const ap = updatedProfile?.authorProfile || null;
+      setFirstName(ap?.firstName || "");
+      setLastName(ap?.lastName || "");
+      setAuthorDisplayName(ap?.displayName || "");
+  
+      setMsg("Author access enabled. Welcome to your dashboard.");
+      setErr("");
+    } catch (e) {
+      console.error(e);
+      setErr(e.message || "Failed to register as author");
+      setMsg("");
+    }
+  }
 
   useEffect(() => {
     if (!authed) return;
