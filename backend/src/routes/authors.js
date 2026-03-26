@@ -20,9 +20,112 @@ function profileDisplayName(profile, fallbackUser = null) {
   );
 }
 
+function emptyProfile(fallbackUser = null) {
+  return {
+    firstName: "",
+    lastName: "",
+    displayName: fallbackUser?.displayName || fallbackUser?.email || "",
+    bio: "",
+    photoUrl: "",
+    website: "",
+    instagram: "",
+    twitter: "",
+  };
+}
+
 /* =========================
    ME (must be ABOVE /:id)
    ========================= */
+
+// Register currently logged-in user as HalfYourBook author
+router.post("/register", authRequired, async (req, res) => {
+  try {
+    const userId = req.user?.sub;
+    const email = req.user?.email || "";
+    const displayName = req.user?.displayName || "";
+
+    if (!userId) {
+      return res.status(401).json({ error: "Not authenticated" });
+    }
+
+    const authBaseUrl =
+      process.env.AUTH_API_BASE_URL || "http://127.0.0.1:3001";
+
+    const cookie = req.headers.cookie || "";
+
+    const roleResponse = await fetch(`${authBaseUrl}/auth/register-author`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        cookie,
+      },
+      body: JSON.stringify({}),
+    });
+
+    const roleData = await roleResponse.json().catch(() => ({}));
+
+    if (!roleResponse.ok) {
+      return res.status(roleResponse.status).json({
+        error: roleData?.error || "Failed to grant author role in central auth",
+      });
+    }
+
+    let profile = await prisma.authorProfile.findUnique({
+      where: { userId },
+      select: {
+        id: true,
+        userId: true,
+        firstName: true,
+        lastName: true,
+        displayName: true,
+        bio: true,
+        photoUrl: true,
+        website: true,
+        instagram: true,
+        twitter: true,
+      },
+    });
+
+    if (!profile) {
+      profile = await prisma.authorProfile.create({
+        data: {
+          userId,
+          firstName: "",
+          lastName: "",
+          displayName: displayName || email || "",
+          bio: "",
+          photoUrl: "",
+          website: "",
+          instagram: "",
+          twitter: "",
+        },
+        select: {
+          id: true,
+          userId: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+          bio: true,
+          photoUrl: true,
+          website: true,
+          instagram: true,
+          twitter: true,
+        },
+      });
+    }
+
+    res.json({
+      ok: true,
+      message: "Author access granted",
+      displayName: profileDisplayName(profile, req.user),
+      authorProfile: profile,
+    });
+  } catch (err) {
+    console.error("POST /api/authors/register failed:", err);
+    res.status(500).json({ error: "Failed to register as author" });
+  }
+});
 
 // Get my author profile
 router.get("/me", authRequired, async (req, res) => {
@@ -49,17 +152,7 @@ router.get("/me", authRequired, async (req, res) => {
       },
     });
 
-    const safeProfile =
-      profile ?? {
-        firstName: "",
-        lastName: "",
-        displayName: "",
-        bio: "",
-        photoUrl: "",
-        website: "",
-        instagram: "",
-        twitter: "",
-      };
+    const safeProfile = profile ?? emptyProfile(req.user);
 
     res.json({
       id: userId,

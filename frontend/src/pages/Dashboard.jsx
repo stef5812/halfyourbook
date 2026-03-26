@@ -82,6 +82,35 @@ export default function Dashboard() {
   useEffect(() => {
     let cancelled = false;
 
+    async function registerAsAuthor() {
+      try {
+        setErr("");
+        setMsg("Registering you as an author...");
+  
+        await api("/authors/register", {
+          method: "POST",
+        });
+  
+        const updatedAuth = await authApi("/me");
+        setAuthMe(updatedAuth || null);
+        setAuthed(!!updatedAuth?.user);
+  
+        const updatedProfile = await api("/authors/me");
+        setProfile(updatedProfile || null);
+  
+        const ap = updatedProfile?.authorProfile || null;
+        setFirstName(ap?.firstName || "");
+        setLastName(ap?.lastName || "");
+        setAuthorDisplayName(ap?.displayName || "");
+  
+        setMsg("Author access enabled. Welcome to your dashboard.");
+      } catch (e) {
+        console.error(e);
+        setErr(e.message || "Failed to register as author");
+        setMsg("");
+      }
+    }
+
     async function checkAuth() {
       try {
         const data = await authApi("/me");
@@ -404,7 +433,32 @@ export default function Dashboard() {
     return (
       <div className="page">
         <div className="card">
-          Your account is logged in, but does not currently have AUTHOR or ADMIN access for HalfYourBook.
+          <div className="cardHeader">
+            <div className="cardTitle">Author access required</div>
+            <div className="cardSub">
+              You are logged in through the central auth system, but your account does not yet have
+              AUTHOR or ADMIN access for HalfYourBook.
+            </div>
+          </div>
+
+          {err ? <div className="card" style={{ marginTop: 12 }}>{err}</div> : null}
+          {msg ? <div className="card" style={{ marginTop: 12 }}>{msg}</div> : null}
+
+          <div style={{ marginTop: 16, display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button className="btn btnPrimary" type="button" onClick={registerAsAuthor}>
+              Register as author
+            </button>
+
+            <Link className="btn btnSecondary" to="/books">
+              Back to book previews
+            </Link>
+
+            {cameFromHome ? (
+              <Link className="btn btnSecondary" to="/">
+                Back to Home
+              </Link>
+            ) : null}
+          </div>
         </div>
       </div>
     );

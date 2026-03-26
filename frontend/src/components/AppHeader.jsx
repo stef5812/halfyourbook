@@ -1,7 +1,7 @@
 // src/components/layout/AppHeader.jsx
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
-import { getCurrentUserWithProfile, logout } from "../lib/api";
+import { getCurrentUserWithProfile, logout, withBase } from "../lib/api";
 import mark from "../assets/new-logo.png";
 import "./AppHeader.css";
 
@@ -15,13 +15,16 @@ export default function AppHeader() {
 
   const menuWrapRef = useRef(null);
 
+  const devNext = "http://localhost:5174/";
+  const prodNext = "https://stefandodds.ie/halfyourbook/";
+
   const loginHref = import.meta.env.DEV
-    ? "http://localhost:5173/login?from=halfyourbook&next=http://localhost:5174/"
-    : "https://auth.stefandodds.ie/login?from=halfyourbook&next=https://halfyourbook.stefandodds.ie/";
+    ? `http://localhost:5173/login?from=halfyourbook&next=${encodeURIComponent(devNext)}`
+    : `https://auth.stefandodds.ie/login?from=halfyourbook&next=${encodeURIComponent(prodNext)}`;
 
   const registerHref = import.meta.env.DEV
-    ? "http://localhost:5173/register?from=halfyourbook&next=http://localhost:5174/"
-    : "https://auth.stefandodds.ie/register?from=halfyourbook&next=https://halfyourbook.stefandodds.ie/";
+    ? `http://localhost:5173/register?from=halfyourbook&next=${encodeURIComponent(devNext)}`
+    : `https://auth.stefandodds.ie/register?from=halfyourbook&next=${encodeURIComponent(prodNext)}`;
 
   useEffect(() => {
     let cancelled = false;
@@ -150,7 +153,11 @@ export default function AppHeader() {
                   {bio ? <div className="menuProfileBio">{bio}</div> : null}
                   {photoUrl ? (
                     <div className="menuProfilePhotoWrap">
-                      <img src={photoUrl} alt={userLabel} className="menuProfilePhoto" />
+                      <img
+                        src={withBase(photoUrl)}
+                        alt={userLabel}
+                        className="menuProfilePhoto"
+                      />
                     </div>
                   ) : null}
                   <div className="menuDivider" />
@@ -177,7 +184,11 @@ export default function AppHeader() {
                   <a className="menuItem" href={loginHref} onClick={() => setOpen(false)}>
                     Login
                   </a>
-                  <a className="menuItem menuPrimary" href={registerHref} onClick={() => setOpen(false)}>
+                  <a
+                    className="menuItem menuPrimary"
+                    href={registerHref}
+                    onClick={() => setOpen(false)}
+                  >
                     Register
                   </a>
                 </>
@@ -197,7 +208,11 @@ export default function AppHeader() {
 
                   <div className="menuDivider" />
 
-                  <button className="menuItem menuPrimary" onClick={handleLogout} type="button">
+                  <button
+                    className="menuItem menuPrimary"
+                    onClick={handleLogout}
+                    type="button"
+                  >
                     Logout
                   </button>
                 </>
