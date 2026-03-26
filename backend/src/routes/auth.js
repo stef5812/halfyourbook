@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import crypto from "crypto";
 import { z } from "zod";
 import { prisma } from "../lib/prisma.js";
-import { signJwt } from "../lib/auth.js";
+import { requireAuth, signJwt } from "../lib/auth.js";
 import { sendMail } from "../lib/mailer.js";
 
 const router = Router();
@@ -47,7 +47,7 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
-r.post("/register-author", requireAuth(prisma), async (req, res) => {
+router.post("/register-author", requireAuth(prisma), async (req, res) => {
   try {
     const userId = req.user?.id || req.user?.userId || req.user?.sub;
 
