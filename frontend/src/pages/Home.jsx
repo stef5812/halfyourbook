@@ -9,16 +9,19 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
+  const devNext = "http://localhost:5174/";
+  const prodNext = "https://stefandodds.ie/halfyourbook/";
+
   const loginHref = import.meta.env.DEV
-    ? "http://localhost:5173/login?from=halfyourbook&next=http://localhost:5174/"
-    : "https://auth.stefandodds.ie/login?from=halfyourbook&next=https://halfyourbook.stefandodds.ie/";
+    ? `http://localhost:5173/login?from=halfyourbook&next=${encodeURIComponent(devNext)}`
+    : `https://auth.stefandodds.ie/login?from=halfyourbook&next=${encodeURIComponent(prodNext)}`;
 
   useEffect(() => {
     let cancelled = false;
 
     async function checkAuth() {
       try {
-        const m = await getCurrentUser(); // hits /auth/me
+        const m = await getCurrentUser();
         if (!cancelled) setMe(m || null);
       } catch {
         if (!cancelled) setMe(null);
@@ -35,12 +38,12 @@ export default function Home() {
 
   async function handleLogout() {
     try {
-      await apiLogout(); // hits /auth/logout
+      await apiLogout();
     } catch {
-      // ignore failure
+      //
     }
     setMe(null);
-    nav("/"); // redirect home
+    nav("/");
   }
 
   const currentUser = me?.user || null;
