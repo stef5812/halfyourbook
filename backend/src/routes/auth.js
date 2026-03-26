@@ -47,7 +47,7 @@ const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
-router.post("/register-author", authRequired(prisma), async (req, res) => {
+router.post("/register-author", authRequired, async (req, res) => {
   try {
     const userId = req.user?.id || req.user?.userId || req.user?.sub;
 

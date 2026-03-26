@@ -110,7 +110,7 @@ export default function Dashboard() {
       setErr("");
       setMsg("Registering you as an author...");
   
-      await api("/authors/register", {
+      await api("/auth/register-author", {
         method: "POST",
       });
   
