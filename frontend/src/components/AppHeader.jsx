@@ -5,6 +5,29 @@ import { getCurrentUserWithProfile, logout, withBase } from "../lib/api";
 import mark from "../assets/new-logo.png";
 import "./AppHeader.css";
 
+function getEnvLinks() {
+  const isLocal =
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1");
+
+  if (isLocal) {
+    return [
+      { label: "Portfolio", href: "http://localhost:5173/" },
+      { label: "Recipe App", href: "http://localhost:5174/recipe-app/" },
+      { label: "Blog", href: "http://localhost:5176/" },
+      { label: "Service Locator", href: "http://localhost:5173/service-locator/" },
+    ];
+  }
+
+  return [
+    { label: "Portfolio", href: "https://stefandodds.ie/" },
+    { label: "Recipe App", href: "https://stefandodds.ie/recipe-app/" },
+    { label: "Blog", href: "https://stefandodds.ie/blog-app/" },
+    { label: "Service Locator", href: "https://stefandodds.ie/service-locator/" },
+  ];
+}
+
 export default function AppHeader() {
   const nav = useNavigate();
 
@@ -14,6 +37,7 @@ export default function AppHeader() {
   const [open, setOpen] = useState(false);
 
   const menuWrapRef = useRef(null);
+  const appLinks = getEnvLinks();
 
   const devNext = "http://localhost:5174/";
   const prodNext = "https://stefandodds.ie/halfyourbook/";
@@ -176,6 +200,22 @@ export default function AppHeader() {
               <Link className="menuItem" to="/about" onClick={() => setOpen(false)}>
                 About
               </Link>
+
+              <div className="menuDivider" />
+
+              
+              <div className="menuLinksScroll">
+                {appLinks.map((item) => (
+                  <a
+                    key={item.label}
+                    className="menuItem"
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
 
               <div className="menuDivider" />
 

@@ -1,4 +1,5 @@
-// src/pages/Books.jsx
+// frontend/src/[ages/Books.jsx]
+
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, withBase } from "../lib/api";
@@ -94,8 +95,6 @@ export default function Books() {
     const myRole = String(me.role || "").toLowerCase();
     if (myRole === "admin") return true;
 
-    // me.id = auth user id
-    // b.authorUserId = auth user id of the book owner
     return Boolean(me.id && b.authorUserId && me.id === b.authorUserId);
   }
 
@@ -124,7 +123,7 @@ export default function Books() {
 
     return items.filter((b) => {
       const hay =
-        `${b?.title ?? ""} ${b?.authorName ?? ""} ${b?.genreName ?? ""} ${b?.description ?? ""}`.toLowerCase();
+        `${b?.title ?? ""} ${b?.authorName ?? ""} ${b?.genreName ?? ""} ${b?.description ?? ""} ${b?.preview ?? ""}`.toLowerCase();
       return hay.includes(needle);
     });
   }, [items, q]);
@@ -216,8 +215,8 @@ export default function Books() {
           ) : null}
 
           {filtered.map((b) => (
-            <div className="card" key={b.id}>
-              <div className="booksCardRow">
+            <div className="card booksCard" key={b.id}>
+              <div className="booksCardBody">
                 {b.coverUrl ? (
                   <img
                     className="booksCover"
@@ -230,27 +229,12 @@ export default function Books() {
                   />
                 ) : null}
 
-                <div className="booksCardContent">
-                  <div className="cardHeader">
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: 10,
-                        alignItems: "baseline",
-                        flexWrap: "wrap",
-                      }}
-                    >
+                <div className="booksTextWrap">
+                  <div className="cardHeader booksCardHeader">
+                    <div className="booksTitleRow">
                       <div className="cardTitle">{b.title}</div>
 
-                      <span
-                        style={{
-                          fontSize: 12,
-                          padding: "3px 10px",
-                          borderRadius: 999,
-                          border: "1px solid rgba(0,0,0,0.15)",
-                          opacity: 0.85,
-                        }}
-                      >
+                      <span className="booksStatusBadge">
                         {b.status || "draft"}
                       </span>
                     </div>
@@ -261,53 +245,47 @@ export default function Books() {
                     </div>
                   </div>
 
-                  <div style={{ padding: "0 16px 16px" }}>
-                    <div style={{ marginBottom: 12, opacity: 0.9 }}>
-                      <strong>Genre:</strong> {b.genreName || b.genreId || "—"}
-                    </div>
+                  <div className="booksMeta">
+                    <strong>Genre:</strong> {b.genreName || b.genreId || "—"}
+                  </div>
 
-                    {b.preview ? (
-                      <div style={{ margin: "12px 0 14px", opacity: 0.9, lineHeight: 1.5 }}>
-                        {b.preview}
-                      </div>
-                    ) : (
-                      <div style={{ margin: "12px 0 14px", opacity: 0.6 }}>
-                        No preview available yet.
-                      </div>
-                    )}
+                  {b.preview ? (
+                    <div className="booksPreviewText">{b.preview}</div>
+                  ) : (
+                    <div className="booksNoPreview">No preview available yet.</div>
+                  )}
 
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      <Link className="btn btnPrimary" to={`/books/${b.id}`}>
-                        Read preview
-                      </Link>
+                  <div className="booksActions">
+                    <Link className="btn btnPrimary" to={`/books/${b.id}`}>
+                      Read preview
+                    </Link>
 
-                      <button
-                        className="btn"
-                        type="button"
-                        onClick={() => {
-                          window.location.href = `${BASE}/api/books/${b.id}/epub?previewOnly=1`;
-                        }}
-                      >
-                        Download EPUB
-                      </button>
+                    <button
+                      className="btn"
+                      type="button"
+                      onClick={() => {
+                        window.location.href = `${BASE}/api/books/${b.id}/epub?previewOnly=1`;
+                      }}
+                    >
+                      Download EPUB
+                    </button>
 
-                      {canEditBook(b) ? (
-                        <>
-                          <Link className="btn btnSecondary" to={`/dashboard?bookId=${b.id}`}>
-                            Edit
-                          </Link>
+                    {canEditBook(b) ? (
+                      <>
+                        <Link className="btn btnSecondary" to={`/dashboard?bookId=${b.id}`}>
+                          Edit
+                        </Link>
 
-                          <button
-                            className="btn"
-                            type="button"
-                            disabled={busyId === b.id}
-                            onClick={() => deleteBook(b.id)}
-                          >
-                            {busyId === b.id ? "Deleting…" : "Delete"}
-                          </button>
-                        </>
-                      ) : null}
-                    </div>
+                        <button
+                          className="btn"
+                          type="button"
+                          disabled={busyId === b.id}
+                          onClick={() => deleteBook(b.id)}
+                        >
+                          {busyId === b.id ? "Deleting…" : "Delete"}
+                        </button>
+                      </>
+                    ) : null}
                   </div>
                 </div>
               </div>
