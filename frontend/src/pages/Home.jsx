@@ -9,7 +9,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const nav = useNavigate();
 
-  const devNext = "http://localhost:5174/";
+  const devNext = "http://localhost:5175/";
   const prodNext = "https://stefandodds.ie/halfyourbook/";
 
   const loginHref = import.meta.env.DEV

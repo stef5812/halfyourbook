@@ -13,10 +13,10 @@ function getEnvLinks() {
 
   if (isLocal) {
     return [
-      { label: "Portfolio", href: "http://localhost:5173/" },
+      { label: "Portfolio", href: "http://localhost:5177/" },
       { label: "Recipe App", href: "http://localhost:5174/recipe-app/" },
       { label: "Blog", href: "http://localhost:5176/" },
-      { label: "Service Locator", href: "http://localhost:5173/service-locator/" },
+      { label: "Service Locator", href: "http://localhost:5178/service-locator/" },
     ];
   }
 
@@ -39,7 +39,7 @@ export default function AppHeader() {
   const menuWrapRef = useRef(null);
   const appLinks = getEnvLinks();
 
-  const devNext = "http://localhost:5174/";
+  const devNext = "http://localhost:5175/";
   const prodNext = "https://stefandodds.ie/halfyourbook/";
 
   const loginHref = import.meta.env.DEV
@@ -203,7 +203,6 @@ export default function AppHeader() {
 
               <div className="menuDivider" />
 
-              
               <div className="menuLinksScroll">
                 {appLinks.map((item) => (
                   <a
